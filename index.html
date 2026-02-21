@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BioVilla — La Célula Viva</title>
+  <link rel="stylesheet" href="APARIENCIA.CSS" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ═══════════ PANTALLA DE INICIO ═══════════ -->
+  <div id="pantalla-inicio" class="pantalla activa">
+    <div class="titulo-wrap">
+      <div class="celula-aura"></div>
+      <h1 class="titulo-juego">
+        <span class="titulo-bio">BIO</span><span class="titulo-villa">VILLA</span>
+      </h1>
+      <p class="subtitulo">⚡ La Célula: Primera Planta Generadora ⚡</p>
+      <div class="separador-pixel"></div>
+      <button class="btn-pixel btn-iniciar" onclick="iniciarJuego()">▶ INICIAR JUEGO</button>
+      <button class="btn-pixel btn-secundario" onclick="mostrarCreditos()">📖 CRÉDITOS</button>
+    </div>
+    <div class="scanlines"></div>
+    <div class="estrellas" id="estrellas"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA DE INTRO / CINEMÁTICA ═══════════ -->
+  <div id="pantalla-intro" class="pantalla">
+    <div class="caja-dialogo intro-dialogo">
+      <div class="retrato-npc" id="retrato-intro">🧬</div>
+      <div class="texto-dialogo-wrap">
+        <p class="nombre-npc">SISTEMA</p>
+        <p class="texto-dialogo" id="texto-intro"></p>
+      </div>
+    </div>
+    <button class="btn-pixel btn-siguiente" id="btn-intro-sig" onclick="siguienteIntro()">SIGUIENTE ▶</button>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA DEL MAPA ═══════════ -->
+  <div id="pantalla-mapa" class="pantalla">
+
+    <!-- HUD superior -->
+    <div class="hud-top">
+      <div class="hud-nombre">🧑 HÉCTOR</div>
+      <div class="hud-atp">
+        <span class="hud-label">ATP</span>
+        <div class="barra-atp-wrap">
+          <div class="barra-atp" id="barra-atp"></div>
+        </div>
+        <span class="hud-atp-val" id="atp-val">0</span>
+      </div>
+      <div class="hud-zona" id="hud-zona">📍 Entrada de BioVilla</div>
+    </div>
+
+    <!-- Canvas del mapa -->
+    <div class="mapa-contenedor">
+      <canvas id="mapa-canvas"></canvas>
+
+      <!-- Zonas interactivas superpuestas -->
+      <div class="zona-hotspot" id="zona-nucleo"
+           style="left:42%; top:38%; width:14%; height:16%;"
+           onclick="entrarZona('nucleo')" title="Centro Celular">
+        <div class="zona-label">🏛 NÚCLEO</div>
+        <div class="zona-glow nucleo-glow"></div>
+      </div>
+
+      <div class="zona-hotspot" id="zona-mitocondria"
+           style="left:62%; top:28%; width:14%; height:14%;"
+           onclick="entrarZona('mitocondria')" title="Mitocondria">
+        <div class="zona-label">⚡ MITOCONDRIA</div>
+        <div class="zona-glow mito-glow"></div>
+      </div>
+
+      <div class="zona-hotspot" id="zona-cinthia"
+           style="left:20%; top:42%; width:12%; height:14%;"
+           onclick="hablarConCinthia()" title="Miss Cinthia">
+        <div class="zona-label">👩‍🏫 MISS CINTHIA</div>
+        <div class="zona-glow cinthia-glow"></div>
+      </div>
+
+      <div class="zona-hotspot" id="zona-redox"
+           style="left:65%; top:55%; width:13%; height:13%;"
+           onclick="entrarZona('redox')" title="Zona REDOX">
+        <div class="zona-label">🔋 REDOX LAB</div>
+        <div class="zona-glow redox-glow"></div>
+      </div>
+
+      <div class="zona-hotspot zona-danger" id="zona-boss"
+           style="left:10%; top:10%; width:15%; height:15%;"
+           onclick="entrarZona('boss')" title="Zona Danger">
+        <div class="zona-label">☠ ZONA DANGER</div>
+        <div class="zona-glow danger-glow"></div>
+      </div>
+    </div>
+
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA DE DIÁLOGO / ESCENA ═══════════ -->
+  <div id="pantalla-dialogo" class="pantalla">
+    <div class="escena-fondo" id="escena-fondo"></div>
+    <div class="caja-dialogo">
+      <div class="retrato-npc" id="retrato-npc">🧑</div>
+      <div class="texto-dialogo-wrap">
+        <p class="nombre-npc" id="nombre-npc">NOMBRE</p>
+        <p class="texto-dialogo" id="texto-dialogo"></p>
+      </div>
+    </div>
+    <div class="opciones-dialogo" id="opciones-dialogo"></div>
+    <button class="btn-pixel btn-siguiente" id="btn-dialogo-sig" onclick="siguienteDialogo()">SIGUIENTE ▶</button>
+    <button class="btn-pixel btn-volver" onclick="volverAlMapa()">◀ MAPA</button>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA DE PREGUNTA (QUIZ) ═══════════ -->
+  <div id="pantalla-quiz" class="pantalla">
+    <div class="quiz-contenedor">
+      <div class="quiz-header">
+        <span class="quiz-icono" id="quiz-icono">❓</span>
+        <h2 class="quiz-titulo" id="quiz-titulo">PREGUNTA</h2>
+      </div>
+      <p class="quiz-pregunta" id="quiz-pregunta"></p>
+      <div class="quiz-opciones" id="quiz-opciones"></div>
+      <div class="quiz-feedback" id="quiz-feedback"></div>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA BOSS ═══════════ -->
+  <div id="pantalla-boss" class="pantalla">
+    <div class="boss-arena">
+      <div class="boss-sprite" id="boss-sprite">💀</div>
+      <h2 class="boss-nombre">FALLO ENERGÉTICO</h2>
+      <p class="boss-subtitulo">ATP Guardian — Nivel Final</p>
+      <div class="boss-hp-wrap">
+        <span>HP BOSS</span>
+        <div class="barra-boss-wrap">
+          <div class="barra-boss" id="barra-boss"></div>
+        </div>
+      </div>
+      <div class="caja-dialogo boss-dialogo" id="boss-dialogo-caja">
+        <p class="texto-dialogo" id="boss-texto"></p>
+      </div>
+      <div class="boss-opciones" id="boss-opciones"></div>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ PANTALLA VICTORIA ═══════════ -->
+  <div id="pantalla-victoria" class="pantalla">
+    <div class="victoria-contenedor">
+      <div class="trofeo-anim">🏆</div>
+      <h1 class="victoria-titulo">¡VICTORIA!</h1>
+      <p class="victoria-sub">Completaste BioVilla</p>
+      <div class="separador-pixel"></div>
+      <p class="victoria-texto" id="victoria-texto"></p>
+      <button class="btn-pixel btn-iniciar" onclick="reiniciarJuego()">↩ JUGAR DE NUEVO</button>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <!-- ═══════════ MODAL CRÉDITOS ═══════════ -->
+  <div id="modal-creditos" class="modal-overlay oculto">
+    <div class="modal-caja">
+      <h2 class="modal-titulo">📖 CRÉDITOS</h2>
+      <p>Proyecto Bioenergía — "La Célula: La Primera Planta Generadora de Energía"</p>
+      <p>Personajes: Héctor (jugador) · Miss Cinthia (guía)</p>
+      <p>Diseño educativo basado en los contenidos de la unidad de Bioenergía</p>
+      <br/>
+      <p>Fecha de presentación: 27 de febrero 2026</p>
+      <button class="btn-pixel btn-secundario" onclick="cerrarCreditos()">CERRAR</button>
+    </div>
+  </div>
+
+  <script src="datos.js"></script>
+  <script src="juego.js"></script>
+</body>
+</html>
