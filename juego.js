@@ -841,20 +841,37 @@ function initMapaDrag() {
   let pinchDistInicial = null;
   let zoomAlIniciarPinch = 1;
   let touchMedio = { x: 0, y: 0 };
+  let touchSobreInteractivo = false; // ¿El toque comenzó sobre un hotspot o NPC?
+  let touchStartTime = 0;
+  let touchMovido = false;
 
   cont.addEventListener('touchstart', e => {
     cancelarInercia();
+    touchMovido = false;
+    touchStartTime = Date.now();
+
+    // Verificar si el toque está sobre un elemento interactivo
+    const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+    touchSobreInteractivo = !!(el && (el.closest('.zona-hotspot') || el.closest('.npc-entidad')));
+
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      vistaMap.arrastrando = true;
       touchInicial = { x: t.clientX, y: t.clientY };
-      vistaMap.startVX = vistaMap.x;
-      vistaMap.startVY = vistaMap.y;
-      vistaMap.lastX = t.clientX;
-      vistaMap.lastY = t.clientY;
-      vistaMap.velX = 0; vistaMap.velY = 0;
+
+      if (!touchSobreInteractivo) {
+        // Solo iniciar drag si no es un hotspot/NPC
+        vistaMap.arrastrando = true;
+        vistaMap.startVX = vistaMap.x;
+        vistaMap.startVY = vistaMap.y;
+        vistaMap.lastX = t.clientX;
+        vistaMap.lastY = t.clientY;
+        vistaMap.velX = 0; vistaMap.velY = 0;
+        e.preventDefault(); // Prevenir scroll solo al arrastrar el mapa
+      }
+      // Si es interactivo, NO llamamos preventDefault para que el click llegue
     } else if (e.touches.length === 2) {
       vistaMap.arrastrando = false;
+      touchSobreInteractivo = false;
       const t1 = e.touches[0], t2 = e.touches[1];
       pinchDistInicial = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       zoomAlIniciarPinch = vistaMap.zoom;
@@ -862,21 +879,26 @@ function initMapaDrag() {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2
       };
+      e.preventDefault();
     }
-    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && vistaMap.arrastrando && touchInicial) {
       const t = e.touches[0];
+      const dx = t.clientX - touchInicial.x;
+      const dy = t.clientY - touchInicial.y;
+      // Si se movió más de 8px, ya es un drag real
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) touchMovido = true;
       vistaMap.velX = t.clientX - vistaMap.lastX;
       vistaMap.velY = t.clientY - vistaMap.lastY;
       vistaMap.lastX = t.clientX;
       vistaMap.lastY = t.clientY;
-      vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
-      vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
+      vistaMap.x = vistaMap.startVX + dx;
+      vistaMap.y = vistaMap.startVY + dy;
       clampVista();
       aplicarTransforma();
+      e.preventDefault();
     } else if (e.touches.length === 2 && pinchDistInicial) {
       const t1 = e.touches[0], t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -890,15 +912,31 @@ function initMapaDrag() {
       vistaMap.zoom = nuevoZoom;
       clampVista();
       aplicarTransforma();
+      e.preventDefault();
     }
-    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
+      const fueRapido = (Date.now() - touchStartTime) < 300;
+
+      // Tap sobre interactivo sin arrastre → disparar click manualmente
+      if (touchSobreInteractivo && fueRapido && !touchMovido && touchInicial) {
+        const el = document.elementFromPoint(touchInicial.x, touchInicial.y);
+        if (el) {
+          const hotspot = el.closest('.zona-hotspot');
+          const npc = el.closest('.npc-entidad');
+          if (hotspot) hotspot.click();
+          else if (npc) npc.click();
+        }
+      }
+
       vistaMap.arrastrando = false;
       touchInicial = null;
       pinchDistInicial = null;
+      touchSobreInteractivo = false;
+      touchMovido = false;
+
       if (Math.abs(vistaMap.velX) > 1 || Math.abs(vistaMap.velY) > 1) {
         aplicarInercia();
       }
