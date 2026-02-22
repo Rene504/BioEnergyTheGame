@@ -30,7 +30,7 @@
     <div class="caja-dialogo intro-dialogo">
       <div class="retrato-npc" id="retrato-intro">🧬</div>
       <div class="texto-dialogo-wrap">
-        <p class="nombre-npc">SISTEMA</p>
+        <p class="nombre-npc" id="nombre-intro">SISTEMA</p>
         <p class="texto-dialogo" id="texto-intro"></p>
       </div>
     </div>
@@ -54,49 +54,65 @@
       <div class="hud-zona" id="hud-zona">📍 Entrada de BioVilla</div>
     </div>
 
-    <!-- Canvas del mapa -->
-    <div class="mapa-contenedor">
-      <canvas id="mapa-canvas"></canvas>
+    <!-- Canvas del mapa con sistema drag+zoom tipo CoC -->
+    <div class="mapa-contenedor" id="mapa-contenedor">
 
-      <!-- Zonas interactivas superpuestas -->
-      <div class="zona-hotspot" id="zona-nucleo"
-           style="left:42%; top:38%; width:14%; height:16%;"
-           onclick="entrarZona('nucleo')" title="Centro Celular">
-        <div class="zona-label">🏛 NÚCLEO</div>
-        <div class="zona-glow nucleo-glow"></div>
-      </div>
+      <!-- MUNDO: todo se mueve y escala aquí dentro -->
+      <div class="mapa-mundo" id="mapa-mundo">
+        <canvas id="mapa-canvas"></canvas>
 
-      <div class="zona-hotspot" id="zona-mitocondria"
-           style="left:62%; top:28%; width:14%; height:14%;"
-           onclick="entrarZona('mitocondria')" title="Mitocondria">
-        <div class="zona-label">⚡ MITOCONDRIA</div>
-        <div class="zona-glow mito-glow"></div>
-      </div>
+        <!-- Núcleo -->
+        <div class="zona-hotspot" id="zona-nucleo"
+             style="left:43%; top:42%; width:14%; height:16%;"
+             onclick="entrarZona('nucleo')" title="Centro Celular">
+          <div class="zona-label">🏛 NÚCLEO</div>
+          <div class="zona-glow nucleo-glow"></div>
+        </div>
 
-      <div class="zona-hotspot" id="zona-cinthia"
-           style="left:20%; top:42%; width:12%; height:14%;"
-           onclick="hablarConCinthia()" title="Miss Cinthia">
-        <div class="zona-label">👩‍🏫 MISS CINTHIA</div>
-        <div class="zona-glow cinthia-glow"></div>
-      </div>
+        <!-- Mitocondria -->
+        <div class="zona-hotspot" id="zona-mitocondria"
+             style="left:62%; top:57%; width:13%; height:13%;"
+             onclick="entrarZona('mitocondria')" title="Mitocondria">
+          <div class="zona-label">⚡ MITOCONDRIA</div>
+          <div class="zona-glow mito-glow"></div>
+        </div>
 
-      <div class="zona-hotspot" id="zona-redox"
-           style="left:65%; top:55%; width:13%; height:13%;"
-           onclick="entrarZona('redox')" title="Zona REDOX">
-        <div class="zona-label">🔋 REDOX LAB</div>
-        <div class="zona-glow redox-glow"></div>
-      </div>
+        <!-- Miss Cinthia -->
+        <div class="zona-hotspot" id="zona-cinthia"
+             style="left:16%; top:50%; width:12%; height:14%;"
+             onclick="hablarConCinthia()" title="Miss Cinthia">
+          <div class="zona-label">👩‍🏫 MISS CINTHIA</div>
+          <div class="zona-glow cinthia-glow"></div>
+        </div>
 
-      <div class="zona-hotspot zona-danger" id="zona-boss"
-           style="left:10%; top:10%; width:15%; height:15%;"
-           onclick="entrarZona('boss')" title="Zona Danger">
-        <div class="zona-label">☠ ZONA DANGER</div>
-        <div class="zona-glow danger-glow"></div>
-      </div>
+        <!-- REDOX Lab -->
+        <div class="zona-hotspot" id="zona-redox"
+             style="left:60%; top:26%; width:14%; height:14%;"
+             onclick="entrarZona('redox')" title="Zona REDOX">
+          <div class="zona-label">🔋 REDOX LAB</div>
+          <div class="zona-glow redox-glow"></div>
+        </div>
+
+        <!-- Zona Danger -->
+        <div class="zona-hotspot zona-danger" id="zona-boss"
+             style="left:64%; top:2%; width:15%; height:14%;"
+             onclick="entrarZona('boss')" title="Zona Danger">
+          <div class="zona-label">☠ ZONA DANGER</div>
+          <div class="zona-glow danger-glow"></div>
+        </div>
+
+      </div><!-- fin .mapa-mundo -->
+    </div><!-- fin .mapa-contenedor -->
+
+    <!-- Botones de zoom fijos (fuera del mundo) -->
+    <div class="zoom-controles">
+      <button class="zoom-btn" onclick="cambiarZoom(0.25)" title="Acercar">＋</button>
+      <button class="zoom-btn" onclick="cambiarZoom(-0.25)" title="Alejar">－</button>
+      <button class="zoom-btn" onclick="resetearVista()" title="Centrar">⌖</button>
     </div>
 
     <div class="scanlines"></div>
-  </div>
+  </div><!-- fin #pantalla-mapa -->
 
   <!-- ═══════════ PANTALLA DE DIÁLOGO / ESCENA ═══════════ -->
   <div id="pantalla-dialogo" class="pantalla">
@@ -163,20 +179,28 @@
 
   <!-- ═══════════ MODAL CRÉDITOS ═══════════ -->
   <div id="modal-creditos" class="modal-overlay oculto">
-    <div class="modal-caja">
-      <h2 class="modal-titulo">📖 CRÉDITOS</h2>
-      <p>Proyecto Bioenergía — "La Célula: La Primera Planta Generadora de Energía"</p>
-      <p>Personajes: Héctor (jugador) · Miss Cinthia (guía)</p>
-      <p>Diseño educativo basado en los contenidos de la unidad de Bioenergía</p>
-      <br/>
-      <p>Fecha de presentación: 27 de febrero 2026</p>
-      <button class="btn-pixel btn-secundario" onclick="cerrarCreditos()">CERRAR</button>
+  <div class="modal-caja">
+    <h2 class="modal-titulo">📖 CRÉDITOS</h2>
+    <p>Proyecto Bioenergía — "La Célula: La Primera Planta Generadora de Energía"</p>
+    
+    <p style="color: var(--amarillo); margin-top: 10px;">Integrantes:</p>
+    <div class="integrantes-grid">
+      <span>- Andree Meza</span>
+      <span>- Brayan Romero</span>
+      <span>- Daniel Gross</span>
+      <span>- Eliac López</span>
+      <span>- Jonathan Moradel</span>
+      <span>- Rene Rodríguez</span>
     </div>
+
+    <p>Diseño educativo basado en los contenidos de la unidad de Bioenergía</p>
+    <p>Fecha de presentación: 27 de febrero 2026</p>
+    <button class="btn-pixel btn-secundario" onclick="cerrarCreditos()">CERRAR</button>
   </div>
+</div>
 
   <script src="datos.js"></script>
-  <script src="Juego.js"></script>
+  <script src="npcs.js"></script>
+  <script src="juego.js"></script>
 </body>
-
 </html>
-
