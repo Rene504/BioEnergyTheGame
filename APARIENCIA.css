@@ -246,14 +246,16 @@ html, body {
 
 .retrato-npc {
   font-size: 56px;
-  width: 72px;
-  min-width: 72px;
-  height: 72px;
+  width: 130px;
+  min-width: 130px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 3px solid var(--panel-borde);
   background: var(--oscuro);
+  overflow: hidden;
+  position: relative;
   animation: retrato-pulso 2s ease-in-out infinite;
 }
 @keyframes retrato-pulso {
@@ -338,21 +340,71 @@ html, body {
   white-space: nowrap;
 }
 
-/* ── CANVAS MAPA ── */
+/* ── CANVAS MAPA — sistema drag+zoom tipo CoC ── */
 .mapa-contenedor {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  margin-top: 48px;
+  position: absolute;
+  top: 48px;
+  left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  cursor: grab;
+  background: #0a1a08;
+}
+.mapa-contenedor.dragging { cursor: grabbing; }
+
+/* El "mundo" — se transforma con translate + scale */
+.mapa-mundo {
+  position: absolute;
+  width: 1400px;
+  height: 933px;
+  background-image: url('Aldea.jpeg');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 #mapa-canvas {
   position: absolute;
   top: 0; left: 0;
   width: 100%;
-  height: calc(100% );
+  height: 100%;
   image-rendering: pixelated;
+  opacity: 0.6;
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
+
+/* Botones de zoom — fijos sobre el mapa */
+.zoom-controles {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.zoom-btn {
+  font-family: var(--fuente-pixel);
+  font-size: 16px;
+  width: 44px;
+  height: 44px;
+  background: rgba(10,10,25,0.92);
+  border: 2px solid var(--cian-dim);
+  color: var(--cian);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s, color 0.1s;
+  box-shadow: 0 0 10px rgba(0,212,255,0.2);
+}
+.zoom-btn:hover {
+  border-color: var(--cian);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(0,212,255,0.5);
+}
+.zoom-btn:active { transform: scale(0.93); }
 
 /* ── ZONAS HOTSPOT ── */
 .zona-hotspot {
@@ -366,6 +418,31 @@ html, body {
   transition: transform 0.15s;
 }
 .zona-hotspot:hover { transform: scale(1.08); }
+
+/* ── ZONA BLOQUEADA ── */
+.zona-hotspot.bloqueada {
+  cursor: not-allowed;
+  filter: grayscale(1) brightness(0.45);
+}
+.zona-hotspot.bloqueada:hover { transform: scale(1.0); }
+.zona-hotspot.bloqueada .zona-label::before {
+  content: "🔒 ";
+}
+.zona-hotspot.bloqueada .zona-glow {
+  animation: none;
+  opacity: 0.15;
+}
+
+/* ── ZONA COMPLETADA ── */
+.zona-hotspot.completada .zona-label {
+  border-color: var(--verde-atp);
+  color: var(--verde-atp);
+  text-shadow: 0 0 8px var(--verde-atp), 2px 2px 0 #000;
+}
+.zona-hotspot.completada .zona-label::after {
+  content: " ✓";
+  color: var(--verde-atp);
+}
 
 .zona-label {
   font-family: var(--fuente-pixel);
@@ -409,9 +486,17 @@ html, body {
 .escena-fondo {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  filter: brightness(0.4);
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  z-index: 0;
+}
+.escena-fondo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 45%, rgba(0,0,0,0.82) 100%);
+  pointer-events: none;
 }
 
 /* opciones de diálogo */
@@ -702,4 +787,270 @@ html, body {
   .caja-dialogo { flex-direction: column; bottom: 130px; }
   .retrato-npc { font-size: 36px; width: 50px; height: 50px; min-width: 50px; }
   .btn-siguiente, .btn-volver { font-size: 8px; padding: 10px 14px; bottom: 50px; }
+}
+/* ══════════════════════════════════════
+   NPCs — Sistema de Aldeanos Ambulantes
+══════════════════════════════════════ */
+
+/* Contenedor del NPC — position absolute dentro de mapa-mundo */
+.npc-entidad {
+  position: absolute;
+  width: 24px;
+  height: 36px;
+  z-index: 25;           /* encima de hotspots (z-index:20) pero bajo canvas */
+  cursor: pointer;
+  transform-origin: center bottom;
+  /* Sin pointer-events en el drag del contenedor gracias a stopPropagation */
+}
+
+/* Nombre flotante siempre visible */
+.npc-nombre {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--fuente-pixel);
+  font-size: 5px;
+  color: var(--amarillo);
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000;
+  pointer-events: none;
+  background: rgba(0,0,0,0.5);
+  padding: 1px 3px;
+}
+
+/* Burbuja de diálogo */
+.npc-burbuja {
+  position: absolute;
+  bottom: calc(100% + 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 10, 30, 0.95);
+  border: 2px solid var(--cian-dim);
+  color: var(--blanco);
+  font-family: var(--fuente-texto);
+  font-size: 13px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  max-width: 200px;
+  white-space: normal;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,212,255,0.3);
+  z-index: 40;
+  pointer-events: none;
+  line-height: 1.3;
+  /* Flecha hacia abajo */
+}
+.npc-burbuja::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--cian-dim);
+}
+.npc-burbuja.oculta  { display: none; }
+.npc-burbuja.visible {
+  display: block;
+  animation: burbuja-aparece 0.2s ease forwards;
+}
+@keyframes burbuja-aparece {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
+
+/* ── SPRITE PIXEL ART ── */
+.npc-sprite-wrap {
+  position: relative;
+  width: 24px;
+  height: 32px;
+}
+
+.npc-pixel-sprite {
+  position: relative;
+  width: 12px;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+/* Sombrero (opcional) */
+.npc-sombrero {
+  width: 14px;
+  height: 4px;
+  background: var(--color-sombrero);
+  margin: 0 auto;
+  position: relative;
+  left: -1px;
+  box-shadow: 0 -3px 0 10px var(--color-sombrero), /* ala */
+              0 -3px 0 5px var(--color-sombrero);
+  image-rendering: pixelated;
+}
+
+/* Cabeza */
+.npc-cabeza {
+  width: 10px;
+  height: 10px;
+  background: var(--color-piel);
+  margin: 0 auto;
+  border: 1px solid rgba(0,0,0,0.4);
+  box-shadow:
+    /* ojos (2 píxeles) */
+    2px 3px 0 1px rgba(0,0,0,0.6),
+    6px 3px 0 1px rgba(0,0,0,0.6);
+  image-rendering: pixelated;
+}
+
+/* Cuerpo / torso */
+.npc-cuerpo {
+  width: 12px;
+  height: 10px;
+  background: var(--color-cuerpo);
+  margin: 0 auto;
+  border: 1px solid rgba(0,0,0,0.3);
+  image-rendering: pixelated;
+}
+
+/* Piernas */
+.npc-piernas {
+  width: 12px;
+  height: 8px;
+  background: var(--color-ropa);
+  margin: 0 auto;
+  /* Separación entre piernas */
+  box-shadow: inset 5px 0 0 0 rgba(0,0,0,0.25);
+  border: 1px solid rgba(0,0,0,0.3);
+  image-rendering: pixelated;
+}
+
+/* Hover sobre NPC: leve brillo */
+.npc-entidad:hover .npc-pixel-sprite {
+  filter: brightness(1.3) drop-shadow(0 0 4px rgba(255,215,0,0.8));
+}
+/* ══════════════════════════════════════
+   ANIMACIONES DE RETRATO — estilo Pokémon
+══════════════════════════════════════ */
+
+/* ── Imagen dentro del retrato ── */
+.retrato-npc img.retrato-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  display: block;
+  /* Animación idle por defecto: respiración suave */
+  animation: npc-idle-bob 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* ── IDLE: respiración / bob suave ── */
+@keyframes npc-idle-bob {
+  0%, 100% { transform: translateY(0px) scale(1);    }
+  30%       { transform: translateY(-4px) scale(1.01); }
+  60%       { transform: translateY(-2px) scale(1);   }
+}
+
+/* ── BOUNCE: al aparecer un nuevo frame de diálogo ── */
+@keyframes npc-bounce-in {
+  0%   { transform: translateY(20px) scale(0.85); opacity: 0; }
+  50%  { transform: translateY(-6px) scale(1.04); opacity: 1; }
+  70%  { transform: translateY(2px)  scale(0.98); }
+  100% { transform: translateY(0px)  scale(1);    opacity: 1;
+         animation-name: npc-idle-bob;
+         animation-duration: 2.4s;
+         animation-iteration-count: infinite; }
+}
+
+/* ── SHAKE: mientras el texto se está escribiendo ── */
+@keyframes npc-talking-shake {
+  0%,100% { transform: translateY(-3px) rotate(0deg);    }
+  20%      { transform: translateY(-5px) rotate(-1deg);   }
+  40%      { transform: translateY(-3px) rotate(0.8deg);  }
+  60%      { transform: translateY(-5px) rotate(-0.5deg); }
+  80%      { transform: translateY(-4px) rotate(0.3deg);  }
+}
+
+/* Clase que se aplica via JS al cambiar frame */
+.retrato-npc img.retrato-img.anim-bounce {
+  animation: npc-bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Clase que se aplica via JS mientras el texto se escribe */
+.retrato-npc img.retrato-img.anim-talking {
+  animation: npc-talking-shake 0.35s ease-in-out infinite;
+}
+
+/* ── Contenedor cuando tiene imagen PNG ── */
+.retrato-npc:has(img.retrato-img) {
+  background: transparent;
+  border-color: var(--cian);
+  box-shadow: 0 0 20px rgba(0,212,255,0.5);
+  overflow: visible; /* para que el bounce no se corte */
+}
+
+/* ════════════════════════════════════════════════
+   VISUAL NOVEL OVERRIDE — estos estilos SIEMPRE
+   ganan por estar al final y usar #id específico
+════════════════════════════════════════════════ */
+#pantalla-dialogo {
+  justify-content: flex-end;
+}
+
+#pantalla-dialogo .caja-dialogo {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  transform: none !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: rgba(5, 8, 22, 0.90) !important;
+  border: none !important;
+  border-top: 3px solid var(--cian-dim) !important;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.9) !important;
+  padding: 22px 80px 30px 80px !important;
+  min-height: 150px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  z-index: 55 !important;
+}
+
+#pantalla-dialogo .retrato-npc {
+  display: none !important;
+}
+
+#pantalla-dialogo .texto-dialogo-wrap {
+  border-left: 4px solid var(--cian) !important;
+  padding-left: 20px !important;
+  width: 100% !important;
+}
+
+#pantalla-dialogo .nombre-npc {
+  font-size: 11px !important;
+  letter-spacing: 3px !important;
+  color: var(--cian) !important;
+  text-shadow: 0 0 12px var(--cian) !important;
+  margin-bottom: 10px !important;
+}
+
+#pantalla-dialogo .texto-dialogo {
+  font-size: clamp(20px, 2.6vw, 26px) !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 4px #000 !important;
+  line-height: 1.6 !important;
+  min-height: 65px !important;
+}
+
+#pantalla-dialogo .btn-siguiente {
+  bottom: 165px !important;
+  right: 40px !important;
+  z-index: 60 !important;
+}
+
+#pantalla-dialogo .btn-volver {
+  bottom: 165px !important;
+  left: 40px !important;
+  z-index: 60 !important;
 }
