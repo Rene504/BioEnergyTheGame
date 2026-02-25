@@ -1239,11 +1239,25 @@ function initMapaDrag() {
   let zoomAlIniciarPinch = 1;
   let touchMedio = { x: 0, y: 0 };
 
+  // ── Umbral de movimiento para distinguir tap vs drag (px) ──
+  const TAP_UMBRAL = 10;
+  let touchEsInteractivo = false;
+
   cont.addEventListener('touchstart', e => {
     cancelarInercia();
+
+    // Detectar si el toque inició sobre un elemento interactivo
+    const target = e.target;
+    touchEsInteractivo = !!(
+      target.closest('.zona-hotspot') ||
+      target.closest('.npc-entidad') ||
+      target.closest('.btn-pixel') ||
+      target.closest('.zoom-btn')
+    );
+
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      vistaMap.arrastrando = true;
+      vistaMap.arrastrando = !touchEsInteractivo; // No iniciar drag en elementos interactivos
       touchInicial = { x: t.clientX, y: t.clientY };
       vistaMap.startVX = vistaMap.x;
       vistaMap.startVY = vistaMap.y;
@@ -1260,20 +1274,40 @@ function initMapaDrag() {
         y: (t1.clientY + t2.clientY) / 2
       };
     }
-    e.preventDefault();
+
+    // Solo prevenir default si NO es un elemento interactivo
+    if (!touchEsInteractivo) {
+      e.preventDefault();
+    }
   }, { passive: false });
 
   cont.addEventListener('touchmove', e => {
-    if (e.touches.length === 1 && vistaMap.arrastrando && touchInicial) {
+    if (e.touches.length === 1 && touchInicial) {
       const t = e.touches[0];
-      vistaMap.velX = t.clientX - vistaMap.lastX;
-      vistaMap.velY = t.clientY - vistaMap.lastY;
-      vistaMap.lastX = t.clientX;
-      vistaMap.lastY = t.clientY;
-      vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
-      vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
-      clampVista();
-      aplicarTransforma();
+      const dx = t.clientX - touchInicial.x;
+      const dy = t.clientY - touchInicial.y;
+      const distMov = Math.hypot(dx, dy);
+
+      // Si se mueve más del umbral, convertir en drag (aunque haya empezado en interactivo)
+      if (!vistaMap.arrastrando && distMov > TAP_UMBRAL) {
+        vistaMap.arrastrando = true;
+        // Recalcular punto de inicio para evitar salto
+        vistaMap.startVX = vistaMap.x;
+        vistaMap.startVY = vistaMap.y;
+        touchInicial = { x: t.clientX, y: t.clientY };
+      }
+
+      if (vistaMap.arrastrando) {
+        vistaMap.velX = t.clientX - vistaMap.lastX;
+        vistaMap.velY = t.clientY - vistaMap.lastY;
+        vistaMap.lastX = t.clientX;
+        vistaMap.lastY = t.clientY;
+        vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
+        vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
+        clampVista();
+        aplicarTransforma();
+        e.preventDefault();
+      }
     } else if (e.touches.length === 2 && pinchDistInicial) {
       const t1 = e.touches[0], t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -1287,13 +1321,33 @@ function initMapaDrag() {
       vistaMap.zoom = nuevoZoom;
       clampVista();
       aplicarTransforma();
+      e.preventDefault();
     }
-    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
+      const wasDragging = vistaMap.arrastrando;
       vistaMap.arrastrando = false;
+      touchEsInteractivo = false;
+
+      // Si NO hubo drag real, disparar click manualmente en el elemento objetivo
+      if (!wasDragging && touchInicial) {
+        const lastTouch = e.changedTouches[0];
+        const dx = lastTouch.clientX - touchInicial.x;
+        const dy = lastTouch.clientY - touchInicial.y;
+        if (Math.hypot(dx, dy) <= TAP_UMBRAL) {
+          const el = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
+          if (el) {
+            // Buscar el elemento clicable más cercano
+            const clickable = el.closest('.zona-hotspot, .npc-entidad, .btn-pixel, .zoom-btn');
+            if (clickable) {
+              clickable.click();
+            }
+          }
+        }
+      }
+
       touchInicial = null;
       pinchDistInicial = null;
       if (Math.abs(vistaMap.velX) > 1 || Math.abs(vistaMap.velY) > 1) {
