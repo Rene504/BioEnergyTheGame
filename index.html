@@ -51,7 +51,11 @@
         </div>
         <span class="hud-atp-val" id="atp-val">0</span>
       </div>
-      <div class="hud-zona" id="hud-zona">📍 Entrada de BioVilla</div>
+      <div class="hud-vidas" id="hud-vidas">
+        <span class="corazon lleno">❤</span>
+        <span class="corazon lleno">❤</span>
+        <span class="corazon lleno">❤</span>
+      </div>
     </div>
 
     <!-- Canvas del mapa con sistema drag+zoom tipo CoC -->
@@ -146,20 +150,53 @@
 
   <!-- ═══════════ PANTALLA BOSS ═══════════ -->
   <div id="pantalla-boss" class="pantalla">
+
+    <!-- HUD jugador + HP Boss en una sola barra superior -->
+    <div class="hud-top">
+      <div class="hud-nombre">🧑 HÉCTOR</div>
+
+      <!-- ATP del jugador -->
+      <div class="hud-atp">
+        <span class="hud-label">ATP</span>
+        <div class="barra-atp-wrap">
+          <div class="barra-atp" id="boss-hud-barra-atp"></div>
+        </div>
+        <span class="hud-atp-val" id="boss-hud-atp-val">0</span>
+      </div>
+
+      <!-- Separador visual -->
+      <div style="width:3px;height:20px;background:#2a2a4a;flex-shrink:0;"></div>
+
+      <!-- HP del Boss -->
+      <div class="hud-atp">
+        <span class="hud-label" style="color:#ff1e1e;text-shadow:0 0 8px #ff1e1e;">HP BOSS</span>
+        <div class="barra-atp-wrap" style="border-color:#700;">
+          <div id="boss-hud-barra-hp" style="height:100%;width:100%;background:linear-gradient(90deg,#7a0000,#ff1e1e);transition:width 0.5s ease;box-shadow:0 0 8px #ff1e1e;"></div>
+        </div>
+      </div>
+
+      <!-- Vidas -->
+      <div class="hud-vidas" id="boss-hud-vidas">
+        <span class="corazon lleno">❤</span>
+        <span class="corazon lleno">❤</span>
+        <span class="corazon lleno">❤</span>
+      </div>
+    </div>
+
+    <!-- Arena del boss -->
     <div class="boss-arena">
       <div class="boss-sprite" id="boss-sprite">💀</div>
       <h2 class="boss-nombre">FALLO ENERGÉTICO</h2>
       <p class="boss-subtitulo">ATP Guardian — Nivel Final</p>
-      <div class="boss-hp-wrap">
-        <span>HP BOSS</span>
-        <div class="barra-boss-wrap">
-          <div class="barra-boss" id="barra-boss"></div>
-        </div>
-      </div>
-      <div class="caja-dialogo boss-dialogo" id="boss-dialogo-caja">
+    </div>
+
+    <div class="boss-opciones" id="boss-opciones"></div>
+    <button class="btn-pixel btn-siguiente" id="btn-boss-sig" onclick="siguienteBossIntro()" style="display:none;">SIGUIENTE ▶</button>
+    <div class="caja-dialogo boss-dialogo" id="boss-dialogo-caja">
+      <div class="texto-dialogo-wrap">
+        <p class="nombre-npc" id="boss-nombre-npc">💀 FALLO ENERGÉTICO</p>
         <p class="texto-dialogo" id="boss-texto"></p>
       </div>
-      <div class="boss-opciones" id="boss-opciones"></div>
     </div>
     <div class="scanlines"></div>
   </div>
