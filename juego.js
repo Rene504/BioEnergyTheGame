@@ -3,6 +3,99 @@
 // Motor del juego: navegación, diálogos, quiz, boss, mapa
 // ═══════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════
+// SISTEMA DE SPRITES — Animación por frames PNG
+// ═══════════════════════════════════════════════════════
+
+const SPRITES = {
+  // Héctor: 6 frames que muestran movimiento del bote
+  // F1/F2: sheet1 — bote al costado izq, pie derecho adelante
+  // F3/F4: sheet3 — bote izq + botella YETI en mano dcha
+  // F5: idle sin bote visible / F6: idle con bote
+  hector: {
+    idle:    ['HectorF4.png', 'HectorF6.png'],                        // breathing idle
+    talking: ['HectorF1.png', 'HectorF2.png', 'HectorF3.png', 'HectorF4.png'], // bote se mueve
+    bote:    ['HectorF1.png', 'HectorF3.png', 'HectorF2.png', 'HectorF4.png'], // ciclo del bote
+  },
+  cinthia: {
+    idle:    ['CinthiaF3.png'],                                        // listening
+    talking: ['CinthiaF1.png', 'CinthiaF2.png', 'CinthiaF4.png', 'CinthiaF5.png'],
+  }
+};
+
+// Timer de animación de retrato
+let _spriteTimer = null;
+let _spriteFrameIdx = 0;
+
+function detenerAnimSprite() {
+  if (_spriteTimer) { clearInterval(_spriteTimer); _spriteTimer = null; }
+  document.body.classList.remove('sprite-activo');
+}
+
+/**
+ * Animar el retrato de un personaje.
+ * @param {string} retratoId  — id del div retrato-npc o retrato-intro
+ * @param {string} personaje  — 'hector' | 'cinthia'
+ * @param {string} modo       — 'talking' | 'idle' | 'bote'
+ * @param {number} fps        — fotogramas por segundo (default 4)
+ */
+function iniciarAnimSprite(retratoId, personaje, modo = 'talking', fps = 4) {
+  detenerAnimSprite();
+
+  const frames = (SPRITES[personaje] && SPRITES[personaje][modo]) || [];
+  if (!frames.length) return;
+
+  const el = document.getElementById(retratoId);
+  if (!el) return;
+
+  // Asegurar que hay un <img class="retrato-img"> dentro
+  let img = el.querySelector('img.retrato-img');
+  if (!img) {
+    img = document.createElement('img');
+    img.className = 'retrato-img';
+    el.innerHTML = '';
+    el.appendChild(img);
+  }
+
+  _spriteFrameIdx = 0;
+  img.src = frames[0];
+  document.body.classList.add('sprite-activo');
+
+  const intervalo = Math.round(1000 / fps);
+  _spriteTimer = setInterval(() => {
+    _spriteFrameIdx = (_spriteFrameIdx + 1) % frames.length;
+    img.src = frames[_spriteFrameIdx];
+  }, intervalo);
+}
+
+/**
+ * Poner un frame estático (sin animación) en el retrato.
+ */
+function setFrameEstatico(retratoId, srcImg) {
+  detenerAnimSprite();
+  const el = document.getElementById(retratoId);
+  if (!el) return;
+  let img = el.querySelector('img.retrato-img');
+  if (!img) {
+    img = document.createElement('img');
+    img.className = 'retrato-img';
+    el.innerHTML = '';
+    el.appendChild(img);
+  }
+  img.src = srcImg;
+}
+
+/**
+ * Detectar qué personaje habla en base al nombre del NPC.
+ */
+function detectarPersonaje(nombre) {
+  if (!nombre) return null;
+  const n = nombre.toUpperCase();
+  if (n.includes('HÉCTOR') || n.includes('HECTOR')) return 'hector';
+  if (n.includes('CINTHIA')) return 'cinthia';
+  return null;
+}
+
 // ── ESTADO GLOBAL ──
 const estado = {
   pantalla: 'inicio',
@@ -18,7 +111,9 @@ const estado = {
   bossHP: 3,
   bossFase: 0,
   quizPendiente: null,
-  quizResuelta: false
+  quizResuelta: false,
+  vidas: 3,
+  vidasMax: 3
 };
 
 // Orden de desbloqueo de zonas
@@ -87,29 +182,189 @@ function actualizarHUD() {
   document.getElementById('atp-val').textContent = estado.atp;
 }
 
+function actualizarVidas() {
+  const el = document.getElementById('hud-vidas');
+  if (!el) return;
+  let html = '';
+  for (let i = 0; i < estado.vidasMax; i++) {
+    if (i < estado.vidas) {
+      html += '<span class="corazon lleno">❤</span>';
+    } else {
+      html += '<span class="corazon vacio">🖤</span>';
+    }
+  }
+  el.innerHTML = html;
+  // Clase especial de urgencia cuando queda 1 vida
+  if (estado.vidas === 1) {
+    document.body.classList.add('ultima-vida');
+  } else {
+    document.body.classList.remove('ultima-vida');
+  }
+}
+
+function perderVida() {
+  const vidasAntes = estado.vidas;
+  estado.vidas--;
+
+  // Animacion dramatica
+  animarPerdidaVida(vidasAntes);
+  animarFlashDanio();
+  animarShakePantalla();
+
+  // Actualizar HUD con delay para ver la animacion primero
+  setTimeout(() => { actualizarVidas(); actualizarHUDBoss(); }, 500);
+
+  if (estado.vidas <= 0) {
+    setTimeout(gameOver, 1800);
+    return true;
+  }
+  return false;
+}
+
+function animarPerdidaVida(vidasAntes) {
+  const hudVidas = document.getElementById('hud-vidas');
+  if (!hudVidas) return;
+  const corazones = hudVidas.querySelectorAll('.corazon.lleno');
+  const corazonRef = corazones[corazones.length - 1];
+  if (!corazonRef) return;
+
+  const rect = corazonRef.getBoundingClientRect();
+
+  // Corazon volador que sale del HUD
+  const flyHeart = document.createElement('div');
+  flyHeart.textContent = '❤';
+  flyHeart.style.cssText = `
+    position: fixed;
+    left: ${rect.left + rect.width / 2}px;
+    top: ${rect.top + rect.height / 2}px;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    color: #ff1e1e;
+    z-index: 99999;
+    pointer-events: none;
+    filter: drop-shadow(0 0 12px #ff1e1e) drop-shadow(0 0 24px #ff0000);
+    animation: corazon-volar 0.9s cubic-bezier(0.22,1,0.36,1) forwards;
+  `;
+  document.body.appendChild(flyHeart);
+  setTimeout(() => flyHeart.remove(), 950);
+
+  // Mensaje de presion segun vidas restantes
+  const vidas = estado.vidas;
+  let msg = '';
+  let color = '#ff1e1e';
+  if (vidas === 2)      { msg = '💔  ¡CUIDADO!  Te quedan 2 vidas'; color = '#ff6b00'; }
+  else if (vidas === 1) { msg = '⚠  ¡ÚLTIMA VIDA!  ¡No falles más!'; color = '#ff1e1e'; }
+  else if (vidas === 0) { msg = '💀  SIN VIDAS  —  GAME OVER'; color = '#ff0000'; }
+
+  if (msg) {
+    const aviso = document.createElement('div');
+    aviso.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(12px, 2.5vw, 20px);
+      color: ${color};
+      text-shadow: 0 0 20px ${color}, 3px 3px 0 #000;
+      z-index: 99999;
+      pointer-events: none;
+      text-align: center;
+      padding: 22px 44px;
+      background: rgba(0,0,0,0.82);
+      border: 3px solid ${color};
+      box-shadow: 0 0 50px ${color}88, inset 0 0 20px rgba(255,0,0,0.12);
+      animation: aviso-vida 1.4s cubic-bezier(0.22,1,0.36,1) forwards;
+      letter-spacing: 2px;
+      line-height: 1.8;
+    `;
+    aviso.textContent = msg;
+    document.body.appendChild(aviso);
+    setTimeout(() => aviso.remove(), 1450);
+  }
+}
+
+function animarFlashDanio() {
+  // Flash radial rojo desde el centro
+  const flash = document.createElement('div');
+  flash.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(255,0,0,0.55) 0%, rgba(180,0,0,0.25) 60%, transparent 100%);
+    z-index: 99998;
+    pointer-events: none;
+    animation: flash-danio 0.65s ease-out forwards;
+  `;
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 700);
+
+  // Borde rojo pulsante en los bordes de pantalla
+  const borde = document.createElement('div');
+  borde.style.cssText = `
+    position: fixed;
+    inset: 0;
+    border: 10px solid #ff1e1e;
+    z-index: 99997;
+    pointer-events: none;
+    box-shadow: inset 0 0 80px rgba(255,30,30,0.65);
+    animation: borde-danio 0.85s ease-out forwards;
+  `;
+  document.body.appendChild(borde);
+  setTimeout(() => borde.remove(), 900);
+}
+
+function animarShakePantalla() {
+  const pantalla = document.querySelector('.pantalla.activa');
+  if (!pantalla) return;
+  pantalla.classList.add('pantalla-shake-anim');
+  setTimeout(() => pantalla.classList.remove('pantalla-shake-anim'), 520);
+}
+
+function gameOver() {
+  mostrarPantalla('inicio');
+  // Reset completo
+  estado.atp = 0;
+  estado.introIndex = 0;
+  estado.zonasCompletadas.clear();
+  estado.cinthiaIndex = 0;
+  estado.cinthiaCompletada = false;
+  estado.vidas = estado.vidasMax;
+  actualizarHUD();
+  actualizarVidas();
+  if (typeof pararNPCs === 'function') pararNPCs();
+  mostrarMensajeTemporal("💀 ¡SIN VIDAS! Vuelve a intentarlo...");
+}
+
 function sumarATP(cantidad) {
   estado.atp = Math.min(estado.atp + cantidad, estado.atpMax);
   actualizarHUD();
+  actualizarHUDBoss();
   const barra = document.getElementById('barra-atp');
   barra.style.boxShadow = '0 0 20px #39ff14';
   setTimeout(() => barra.style.boxShadow = '0 0 8px #39ff14', 600);
 }
 
-function escribirTexto(elementId, texto, velocidad = 20, retratoId) {
+function escribirTexto(elementId, texto, velocidad = 20, retratoId, personajeHint) {
   const el = document.getElementById(elementId);
   if (!el) return;
   el.textContent = '';
   let i = 0;
 
-  // Detectar la imagen del retrato para animar
+  // Detectar personaje para sprite
   const retratoEl = retratoId ? document.getElementById(retratoId) : null;
-  const img = retratoEl ? retratoEl.querySelector('img.retrato-img') : null;
+  const personaje = personajeHint || null;
 
-  // Animación de "hablando" mientras se escribe
-  if (img) {
-    img.classList.remove('anim-bounce', 'anim-talking');
-    void img.offsetWidth; // reflow para reiniciar
-    img.classList.add('anim-talking');
+  // Si hay retrato con personaje identificado, animar talking
+  if (retratoEl && personaje) {
+    iniciarAnimSprite(retratoId, personaje, 'talking', 4);
+  } else {
+    // Fallback: CSS animation si hay img (compatibilidad)
+    const img = retratoEl ? retratoEl.querySelector('img.retrato-img') : null;
+    if (img) {
+      img.classList.remove('anim-bounce', 'anim-talking');
+      void img.offsetWidth;
+      img.classList.add('anim-talking');
+    }
   }
 
   const intervalo = setInterval(() => {
@@ -118,9 +373,11 @@ function escribirTexto(elementId, texto, velocidad = 20, retratoId) {
     if (i >= texto.length) {
       clearInterval(intervalo);
       // Al terminar: volver a idle
-      if (img) {
-        img.classList.remove('anim-talking');
-        // idle se aplica via CSS animation en .retrato-img sin clase extra
+      if (retratoEl && personaje) {
+        iniciarAnimSprite(retratoId, personaje, 'idle', 1.5);
+      } else {
+        const img = retratoEl ? retratoEl.querySelector('img.retrato-img') : null;
+        if (img) img.classList.remove('anim-talking');
       }
     }
   }, velocidad);
@@ -293,21 +550,29 @@ function mostrarIntroFrame() {
   const nombreEl  = document.getElementById('nombre-intro');
   const textoEl   = document.getElementById('texto-intro');
 
-  if (retratoEl) retratoEl.innerHTML = frame.retrato;
-  animarRetratoBounce('retrato-intro');
+  // Detectar personaje para sprite
+  const personaje = detectarPersonaje(frame.nombre);
+
+  if (personaje && retratoEl) {
+    // Usar sprite PNG animado
+    iniciarAnimSprite('retrato-intro', personaje, 'talking', 4);
+  } else {
+    // Emoji / SISTEMA — usar HTML directo
+    detenerAnimSprite();
+    if (retratoEl) retratoEl.innerHTML = frame.retrato;
+  }
+
   if (nombreEl)  nombreEl.textContent  = frame.nombre;
   if (textoEl) {
     textoEl.textContent = '';
     let i = 0;
-    // Animación talking en el retrato de intro
-    const imgIntro = retratoEl ? retratoEl.querySelector('img.retrato-img') : null;
-    if (imgIntro) { imgIntro.classList.remove('anim-talking'); void imgIntro.offsetWidth; imgIntro.classList.add('anim-talking'); }
     const intervalo = setInterval(() => {
       textoEl.textContent += frame.texto[i];
       i++;
       if (i >= frame.texto.length) {
         clearInterval(intervalo);
-        if (imgIntro) imgIntro.classList.remove('anim-talking');
+        // Idle al terminar de escribir
+        if (personaje) iniciarAnimSprite('retrato-intro', personaje, 'idle', 1.5);
       }
     }, 22);
   }
@@ -367,12 +632,21 @@ function entrarZona(zonaId) {
   estado.dialogoActual = zona.dialogos;
   estado.quizResuelta = estado.zonasCompletadas.has(zonaId);
 
-  document.getElementById('escena-fondo').style.background = zona.fondo;
+  const fondosImagen = { nucleo:'FondoAldeanoLoco.png', mitocondria:'FondoDonCelula.png', redox:'FondoDrKrebs.png' };
+  const escenaFondo = document.getElementById('escena-fondo');
+  escenaFondo.removeAttribute('style');
+  if (fondosImagen[zonaId]) {
+    escenaFondo.style.backgroundImage    = "url('" + fondosImagen[zonaId] + "')";
+    escenaFondo.style.backgroundSize     = 'cover';
+    escenaFondo.style.backgroundPosition = 'center center';
+    escenaFondo.style.backgroundRepeat   = 'no-repeat';
+  } else {
+    escenaFondo.style.background = zona.fondo;
+  }
   document.getElementById('opciones-dialogo').innerHTML = '';
   document.getElementById('btn-dialogo-sig').style.display = 'block';
 
   const nombres = { nucleo: 'Núcleo Central', mitocondria: 'Mitocondria', redox: 'REDOX Lab' };
-  document.getElementById('hud-zona').textContent = '📍 ' + (nombres[zonaId] || zonaId);
 
   // Pausar NPCs mientras estamos en otra pantalla
   if (typeof pararNPCs === 'function') pararNPCs();
@@ -391,8 +665,6 @@ function hablarConCinthia() {
   _fondo.style.backgroundPosition = 'center center';
   document.getElementById('opciones-dialogo').innerHTML = '';
   document.getElementById('btn-dialogo-sig').style.display = 'block';
-  document.getElementById('hud-zona').textContent = '📍 Miss Cinthia';
-  // Pausar NPCs mientras estamos en otra pantalla
   if (typeof pararNPCs === 'function') pararNPCs();
   mostrarPantalla('dialogo');
   mostrarDialogoActual();
@@ -404,10 +676,34 @@ function mostrarDialogoActual() {
     finDialogo();
     return;
   }
-  document.getElementById('retrato-npc').innerHTML = frame.retrato;
-  document.getElementById('nombre-npc').textContent  = frame.nombre;
-  animarRetratoBounce('retrato-npc');
-  escribirTexto('texto-dialogo', frame.texto, 18, 'retrato-npc');
+
+  const retratoEl = document.getElementById('retrato-npc');
+
+  // En la escena de Cinthia el fondo ya la muestra —
+  // NO mostramos el sprite lateral para evitar duplicados.
+  if (estado.zonaActual === 'cinthia') {
+    detenerAnimSprite();
+    if (retratoEl) retratoEl.innerHTML = '';
+    document.getElementById('nombre-npc').textContent = frame.nombre;
+    escribirTexto('texto-dialogo', frame.texto, 18);
+    return;
+  }
+
+  const personaje = detectarPersonaje(frame.nombre);
+
+  if (personaje) {
+    // Usar sistema de sprites para Héctor y Miss Cinthia (otras escenas)
+    iniciarAnimSprite('retrato-npc', personaje, 'talking', 4);
+    document.getElementById('nombre-npc').textContent = frame.nombre;
+    escribirTexto('texto-dialogo', frame.texto, 18, 'retrato-npc', personaje);
+  } else {
+    // NPC genérico — emoji o texto
+    detenerAnimSprite();
+    if (retratoEl) retratoEl.innerHTML = frame.retrato;
+    document.getElementById('nombre-npc').textContent = frame.nombre;
+    animarRetratoBounce('retrato-npc');
+    escribirTexto('texto-dialogo', frame.texto, 18, 'retrato-npc');
+  }
 }
 
 function siguienteDialogo() {
@@ -459,10 +755,10 @@ function finDialogo() {
 }
 
 function volverAlMapa() {
+  detenerAnimSprite();
   const _f = document.getElementById('escena-fondo');
-  if (_f) { _f.style.backgroundImage=''; _f.style.backgroundSize=''; _f.style.backgroundPosition=''; }
+  if (_f) { _f.removeAttribute('style'); }
   mostrarPantalla('mapa');
-  document.getElementById('hud-zona').textContent = '📍 BioVilla';
   actualizarEstadoZonas();
   // Reanudar loop de NPCs si fue pausado
   if (typeof tickNPCs === 'function' && !npcAnimLoop) {
@@ -520,6 +816,8 @@ function responderQuiz(opcion, quizData, callbackOk, opcionesEl) {
   } else {
     feedback.textContent = quizData.feedbackFail;
     feedback.className = 'quiz-feedback fail';
+    const muerto = perderVida();
+    if (muerto) return; // game over
     setTimeout(() => {
       estado.quizResuelta = false;
       feedback.textContent = '';
@@ -533,24 +831,43 @@ function responderQuiz(opcion, quizData, callbackOk, opcionesEl) {
 }
 
 // ── BOSS ──
+var _bossIntroIdx = 0;
+
 function iniciarBoss() {
   estado.bossHP = BOSS_DATA.hpTotal;
   estado.bossFase = 0;
+  _bossIntroIdx = 0;
+
+  const pantallaBoss = document.getElementById('pantalla-boss');
+  pantallaBoss.style.backgroundImage    = "url('FondoBossATP.png')";
+  pantallaBoss.style.backgroundSize     = 'cover';
+  pantallaBoss.style.backgroundPosition = 'center center';
+
   actualizarBarraBoss();
+  actualizarHUDBoss();
   mostrarPantalla('boss');
   mostrarIntroduccionBoss(0);
 }
 
 function mostrarIntroduccionBoss(idx) {
+  _bossIntroIdx = idx;
   const intro = BOSS_DATA.introduccion[idx];
   if (!intro) {
-    setTimeout(() => lanzarPreguntaBoss(0), 500);
+    var btnSig = document.getElementById('btn-boss-sig');
+    if (btnSig) btnSig.style.display = 'none';
+    lanzarPreguntaBoss(0);
     return;
   }
-  document.getElementById('boss-texto').textContent = '';
   document.getElementById('boss-opciones').innerHTML = '';
-  escribirTexto('boss-texto', intro.texto, 25);
-  setTimeout(() => mostrarIntroduccionBoss(idx + 1), intro.texto.length * 25 + 1500);
+  var nombreEl = document.getElementById('boss-nombre-npc');
+  if (nombreEl) nombreEl.textContent = '💀 ' + BOSS_DATA.nombre;
+  var btnSig = document.getElementById('btn-boss-sig');
+  if (btnSig) btnSig.style.display = 'block';
+  escribirTexto('boss-texto', intro.texto, 22);
+}
+
+function siguienteBossIntro() {
+  mostrarIntroduccionBoss(_bossIntroIdx + 1);
 }
 
 function lanzarPreguntaBoss(faseIdx) {
@@ -560,6 +877,9 @@ function lanzarPreguntaBoss(faseIdx) {
     return;
   }
   estado.bossFase = faseIdx;
+
+  var nombreEl = document.getElementById('boss-nombre-npc');
+  if (nombreEl) nombreEl.textContent = '💀 ' + BOSS_DATA.nombre;
 
   document.getElementById('boss-texto').textContent = pregunta.titulo + '\n\n' + pregunta.pregunta;
   const opcionesEl = document.getElementById('boss-opciones');
@@ -603,12 +923,19 @@ function responderBoss(opcion, pregunta, faseIdx, opcionesEl) {
       if (estado.bossHP <= 0) {
         victoria();
       } else {
-        lanzarPreguntaBoss(faseIdx + 1);
+        const siguienteFase = faseIdx + 1;
+        if (siguienteFase === BOSS_DATA.preguntas.length - 1) {
+          activarFase2Boss(() => lanzarPreguntaBoss(siguienteFase));
+        } else {
+          lanzarPreguntaBoss(siguienteFase);
+        }
       }
     }, 2800);
   } else {
     escribirTexto('boss-texto', '❌ ' + pregunta.feedbackFail, 15);
     document.getElementById('boss-sprite').style.animation = 'boss-shake 0.1s ease-in-out infinite alternate';
+    const muerto = perderVida();
+    if (muerto) return;
     setTimeout(() => {
       document.getElementById('boss-sprite').style.animation = 'boss-shake 0.3s ease-in-out infinite alternate';
       opcionesEl.querySelectorAll('button').forEach(b => { b.disabled = false; });
@@ -619,12 +946,80 @@ function responderBoss(opcion, pregunta, faseIdx, opcionesEl) {
 
 function actualizarBarraBoss() {
   const pct = (estado.bossHP / BOSS_DATA.hpTotal) * 100;
-  document.getElementById('barra-boss').style.width = pct + '%';
+  const barraHP = document.getElementById('boss-hud-barra-hp');
+  if (barraHP) barraHP.style.width = pct + '%';
+}
+
+function actualizarHUDBoss() {
+  const barraATP = document.getElementById('boss-hud-barra-atp');
+  const valATP   = document.getElementById('boss-hud-atp-val');
+  const vidas    = document.getElementById('boss-hud-vidas');
+  if (barraATP) barraATP.style.width = Math.min((estado.atp / estado.atpMax) * 100, 100) + '%';
+  if (valATP)   valATP.textContent   = estado.atp;
+  if (vidas) {
+    let html = '';
+    for (let i = 0; i < estado.vidasMax; i++) {
+      html += i < estado.vidas
+        ? '<span class="corazon lleno">❤</span>'
+        : '<span class="corazon vacio">🖤</span>';
+    }
+    vidas.innerHTML = html;
+  }
+  actualizarBarraBoss();
+}
+
+function activarFase2Boss(callback) {
+  const pantallaBoss = document.getElementById('pantalla-boss');
+  const sprite  = document.getElementById('boss-sprite');
+  const opciones = document.getElementById('boss-opciones');
+  if (opciones) opciones.innerHTML = '';
+
+  sprite.style.animation = 'boss-shake 0.08s ease-in-out infinite alternate';
+  sprite.style.filter    = 'brightness(3) drop-shadow(0 0 40px #fff)';
+
+  if (!document.getElementById('fase2-keyframe')) {
+    const s = document.createElement('style');
+    s.id = 'fase2-keyframe';
+    s.textContent = `
+      @keyframes fase2-flash {
+        0%{opacity:0}20%{opacity:1}50%{opacity:1}80%{opacity:.6}100%{opacity:0}
+      }
+      @keyframes fase2-entrada {
+        0%  {transform:scale(1.4) rotate(-3deg);opacity:0;filter:brightness(3)}
+        60% {transform:scale(.97) rotate(1deg);opacity:1;filter:brightness(1.5)}
+        100%{transform:scale(1)   rotate(0deg);opacity:1;filter:drop-shadow(0 0 20px rgba(255,30,30,.9))}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:99999;pointer-events:none;opacity:0;animation:fase2-flash 2.2s ease-in-out forwards;';
+  document.body.appendChild(flash);
+
+  setTimeout(() => {
+    pantallaBoss.style.backgroundImage    = "url('FondoBossATPFaseFinal.png')";
+    pantallaBoss.style.backgroundSize     = 'cover';
+    pantallaBoss.style.backgroundPosition = 'center center';
+    sprite.textContent = '💀';
+    sprite.style.animation = 'fase2-entrada 0.9s cubic-bezier(.22,1,.36,1) forwards';
+    sprite.style.filter    = '';
+    escribirTexto('boss-texto', '⚡ ¡FASE FINAL ACTIVADA! ¡EL FALLO ENERGÉTICO HA EVOLUCIONADO! ¡Responde la pregunta definitiva para salvar BioVilla!', 18);
+  }, 1100);
+
+  setTimeout(() => {
+    flash.remove();
+    sprite.style.animation = 'boss-shake 0.3s ease-in-out infinite alternate';
+    sprite.style.filter    = 'drop-shadow(0 0 20px rgba(255,30,30,0.8))';
+    if (callback) callback();
+  }, 2900);
 }
 
 // ── VICTORIA ──
 function victoria() {
   setTimeout(() => {
+    var nombreEl = document.getElementById('boss-nombre-npc');
+    if (nombreEl) nombreEl.textContent = '💀 ' + BOSS_DATA.nombre;
     escribirTexto('boss-texto', BOSS_DATA.dialogoVictoria, 20);
     setTimeout(() => {
       mostrarPantalla('victoria');
@@ -639,7 +1034,9 @@ function reiniciarJuego() {
   estado.zonasCompletadas.clear();
   estado.cinthiaIndex = 0;
   estado.cinthiaCompletada = false;
+  estado.vidas = estado.vidasMax;
   actualizarHUD();
+  actualizarVidas();
   if (typeof pararNPCs === 'function') pararNPCs();
   mostrarPantalla('inicio');
 }
@@ -841,37 +1238,20 @@ function initMapaDrag() {
   let pinchDistInicial = null;
   let zoomAlIniciarPinch = 1;
   let touchMedio = { x: 0, y: 0 };
-  let touchSobreInteractivo = false; // ¿El toque comenzó sobre un hotspot o NPC?
-  let touchStartTime = 0;
-  let touchMovido = false;
 
   cont.addEventListener('touchstart', e => {
     cancelarInercia();
-    touchMovido = false;
-    touchStartTime = Date.now();
-
-    // Verificar si el toque está sobre un elemento interactivo
-    const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-    touchSobreInteractivo = !!(el && (el.closest('.zona-hotspot') || el.closest('.npc-entidad')));
-
     if (e.touches.length === 1) {
       const t = e.touches[0];
+      vistaMap.arrastrando = true;
       touchInicial = { x: t.clientX, y: t.clientY };
-
-      if (!touchSobreInteractivo) {
-        // Solo iniciar drag si no es un hotspot/NPC
-        vistaMap.arrastrando = true;
-        vistaMap.startVX = vistaMap.x;
-        vistaMap.startVY = vistaMap.y;
-        vistaMap.lastX = t.clientX;
-        vistaMap.lastY = t.clientY;
-        vistaMap.velX = 0; vistaMap.velY = 0;
-        e.preventDefault(); // Prevenir scroll solo al arrastrar el mapa
-      }
-      // Si es interactivo, NO llamamos preventDefault para que el click llegue
+      vistaMap.startVX = vistaMap.x;
+      vistaMap.startVY = vistaMap.y;
+      vistaMap.lastX = t.clientX;
+      vistaMap.lastY = t.clientY;
+      vistaMap.velX = 0; vistaMap.velY = 0;
     } else if (e.touches.length === 2) {
       vistaMap.arrastrando = false;
-      touchSobreInteractivo = false;
       const t1 = e.touches[0], t2 = e.touches[1];
       pinchDistInicial = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       zoomAlIniciarPinch = vistaMap.zoom;
@@ -879,26 +1259,21 @@ function initMapaDrag() {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2
       };
-      e.preventDefault();
     }
+    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && vistaMap.arrastrando && touchInicial) {
       const t = e.touches[0];
-      const dx = t.clientX - touchInicial.x;
-      const dy = t.clientY - touchInicial.y;
-      // Si se movió más de 8px, ya es un drag real
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) touchMovido = true;
       vistaMap.velX = t.clientX - vistaMap.lastX;
       vistaMap.velY = t.clientY - vistaMap.lastY;
       vistaMap.lastX = t.clientX;
       vistaMap.lastY = t.clientY;
-      vistaMap.x = vistaMap.startVX + dx;
-      vistaMap.y = vistaMap.startVY + dy;
+      vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
+      vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
       clampVista();
       aplicarTransforma();
-      e.preventDefault();
     } else if (e.touches.length === 2 && pinchDistInicial) {
       const t1 = e.touches[0], t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -912,31 +1287,15 @@ function initMapaDrag() {
       vistaMap.zoom = nuevoZoom;
       clampVista();
       aplicarTransforma();
-      e.preventDefault();
     }
+    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
-      const fueRapido = (Date.now() - touchStartTime) < 300;
-
-      // Tap sobre interactivo sin arrastre → disparar click manualmente
-      if (touchSobreInteractivo && fueRapido && !touchMovido && touchInicial) {
-        const el = document.elementFromPoint(touchInicial.x, touchInicial.y);
-        if (el) {
-          const hotspot = el.closest('.zona-hotspot');
-          const npc = el.closest('.npc-entidad');
-          if (hotspot) hotspot.click();
-          else if (npc) npc.click();
-        }
-      }
-
       vistaMap.arrastrando = false;
       touchInicial = null;
       pinchDistInicial = null;
-      touchSobreInteractivo = false;
-      touchMovido = false;
-
       if (Math.abs(vistaMap.velX) > 1 || Math.abs(vistaMap.velY) > 1) {
         aplicarInercia();
       }
@@ -953,5 +1312,6 @@ function initMapaDrag() {
 document.addEventListener('DOMContentLoaded', () => {
   generarEstrellas();
   actualizarHUD();
+  actualizarVidas();
   initMapaDrag();
 });
