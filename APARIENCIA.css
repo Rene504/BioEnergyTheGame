@@ -333,11 +333,38 @@ html, body {
 }
 .hud-atp-val { color: var(--verde-atp); min-width: 30px; }
 
-.hud-zona {
-  color: var(--gris);
-  font-size: 8px;
-  text-align: right;
-  white-space: nowrap;
+.hud-vidas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.corazon {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s, opacity 0.3s;
+  display: inline-block;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 4px rgba(255, 50, 50, 0.7));
+}
+
+.corazon.lleno {
+  color: #ff3333;
+  animation: latido 1.5s ease-in-out infinite;
+}
+
+.corazon.vacio {
+  color: #333355;
+  filter: none;
+  opacity: 0.5;
+  animation: none;
+}
+
+@keyframes latido {
+  0%, 100% { transform: scale(1); }
+  15%       { transform: scale(1.18); }
+  30%       { transform: scale(1); }
 }
 
 /* ── CANVAS MAPA — sistema drag+zoom tipo CoC ── */
@@ -610,19 +637,26 @@ html, body {
 ══════════════════════════════════════ */
 #pantalla-boss {
   background: radial-gradient(ellipse at 50% 30%, #1a0000 0%, #050505 80%);
+  justify-content: flex-start;
 }
 
+/* Zona superior: sprite + nombre */
 .boss-arena {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   width: min(700px, 90vw);
   z-index: 10;
+  padding-top: 60px;
+  padding-bottom: 260px;
 }
 
+/* Ocultar la vieja barra HP central */
+.boss-hp-wrap { display: none !important; }
+
 .boss-sprite {
-  font-size: 100px;
+  font-size: clamp(60px, 10vw, 100px);
   animation: boss-shake 0.3s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 20px rgba(255,30,30,0.8));
 }
@@ -633,7 +667,7 @@ html, body {
 
 .boss-nombre {
   font-family: var(--fuente-pixel);
-  font-size: clamp(14px, 3vw, 22px);
+  font-size: clamp(12px, 3vw, 22px);
   color: var(--rojo-danger);
   text-shadow: 0 0 20px var(--rojo-danger), 3px 3px 0 #500;
   letter-spacing: 3px;
@@ -667,20 +701,79 @@ html, body {
   box-shadow: 0 0 10px var(--rojo-danger);
 }
 
+/* ── Caja de diálogo del boss — fija al fondo como los otros ── */
 .boss-dialogo {
-  position: relative;
-  bottom: unset;
-  left: unset;
-  transform: unset;
-  width: 100%;
-  border-color: #500;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  transform: none !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: rgba(15, 2, 2, 0.92) !important;
+  border: none !important;
+  border-top: 3px solid #700 !important;
+  box-shadow: 0 -8px 40px rgba(255,30,30,0.15) !important;
+  padding: 22px 80px 30px 80px !important;
+  min-height: 140px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  z-index: 55 !important;
 }
 
+/* Ocultar retrato (emoji ✋) dentro de la caja del boss */
+#pantalla-boss .boss-dialogo .retrato-npc {
+  display: none !important;
+}
+
+/* Nombre del boss en la caja */
+#pantalla-boss .boss-dialogo .nombre-npc {
+  font-family: var(--fuente-pixel) !important;
+  font-size: 11px !important;
+  letter-spacing: 3px !important;
+  color: var(--rojo-danger) !important;
+  text-shadow: 0 0 12px var(--rojo-danger) !important;
+  margin-bottom: 10px !important;
+}
+
+/* Texto del boss */
+#pantalla-boss .boss-dialogo .texto-dialogo,
+#pantalla-boss #boss-texto {
+  font-family: var(--fuente-texto) !important;
+  font-size: clamp(20px, 2.6vw, 26px) !important;
+  color: #ffcccc !important;
+  text-shadow: 1px 1px 4px #000 !important;
+  line-height: 1.6 !important;
+  min-height: 65px !important;
+  border-left: 4px solid #700 !important;
+  padding-left: 20px !important;
+}
+
+/* Opciones del boss — encima de la caja de diálogo */
 .boss-opciones {
+  position: fixed;
+  bottom: 155px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 100%;
+  width: min(700px, 90vw);
+  z-index: 60;
+}
+
+/* Botón SIGUIENTE del boss */
+#pantalla-boss .btn-siguiente {
+  position: fixed !important;
+  bottom: 155px !important;
+  right: 40px !important;
+  z-index: 65 !important;
+  background: var(--rojo-danger) !important;
+  border-color: #700 !important;
+  color: #fff !important;
+  box-shadow: 4px 4px 0 #500 !important;
 }
 
 /* ══════════════════════════════════════
@@ -1017,8 +1110,36 @@ html, body {
   z-index: 55 !important;
 }
 
+/* ── Retrato en pantalla-dialogo: oculto si es emoji, visible si tiene sprite ── */
 #pantalla-dialogo .retrato-npc {
   display: none !important;
+}
+
+/* Si contiene una imagen sprite, mostrar como panel lateral */
+#pantalla-dialogo .retrato-npc:has(img.retrato-img) {
+  display: flex !important;
+  position: fixed !important;
+  left: 40px !important;
+  bottom: 110px !important;
+  width: 140px !important;
+  height: 190px !important;
+  min-width: 140px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  animation: none !important;
+  z-index: 60 !important;
+}
+
+#pantalla-dialogo .retrato-npc:has(img.retrato-img) img.retrato-img {
+  width: 140px !important;
+  height: 190px !important;
+  object-fit: contain !important;
+  object-position: bottom center !important;
+  image-rendering: pixelated !important;
+  filter: drop-shadow(0 0 12px rgba(0,212,255,0.5)) drop-shadow(2px 2px 0 rgba(0,0,0,0.8)) !important;
+  animation: sprite-idle-float 2.2s ease-in-out infinite !important;
 }
 
 #pantalla-dialogo .texto-dialogo-wrap {
@@ -1053,4 +1174,149 @@ html, body {
   bottom: 165px !important;
   left: 40px !important;
   z-index: 60 !important;
+}
+/* ══════════════════════════════════════
+   SISTEMA SPRITE — Héctor & Miss Cinthia
+══════════════════════════════════════ */
+
+/* Animación flotante del sprite en el retrato */
+@keyframes sprite-idle-float {
+  0%, 100% { transform: translateY(0px) scale(1);     }
+  40%       { transform: translateY(-6px) scale(1.01); }
+  70%       { transform: translateY(-3px) scale(1);    }
+}
+
+/* Ajustar padding-left del diálogo cuando hay sprite visible */
+#pantalla-dialogo .caja-dialogo {
+  padding-left: 80px !important; /* default sin sprite */
+}
+body.sprite-activo #pantalla-dialogo .caja-dialogo {
+  padding-left: 210px !important;
+}
+
+/* En intro, el retrato es más grande para los personajes principales */
+#pantalla-intro .retrato-npc:has(img.retrato-img) {
+  width: 130px !important;
+  height: 175px !important;
+  min-width: 130px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  animation: none !important;
+}
+
+#pantalla-intro .retrato-npc:has(img.retrato-img) img.retrato-img {
+  width: 130px !important;
+  height: 175px !important;
+  object-fit: contain !important;
+  object-position: bottom center !important;
+  image-rendering: pixelated !important;
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.4)) drop-shadow(2px 2px 0 rgba(0,0,0,0.9)) !important;
+  animation: sprite-idle-float 2.4s ease-in-out infinite !important;
+}
+
+@media (max-width: 600px) {
+  #pantalla-dialogo .caja-dialogo { padding-left: 16px !important; }
+  #pantalla-dialogo .retrato-npc:has(img.retrato-img) {
+    left: 8px !important; width: 80px !important; height: 110px !important;
+  }
+  #pantalla-dialogo .retrato-npc:has(img.retrato-img) img.retrato-img {
+    width: 80px !important; height: 110px !important;
+  }
+}
+/* ══════════════════════════════════════
+   SISTEMA DE VIDAS — ANIMACIONES DE DAÑO
+══════════════════════════════════════ */
+
+/* Corazón que sale volando hacia arriba al perderse */
+@keyframes corazon-volar {
+  0% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+    filter: drop-shadow(0 0 16px #ff1e1e);
+  }
+  30% {
+    transform: translate(-50%, -120%) scale(2.2) rotate(-15deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 28px #ff0000) brightness(1.5);
+  }
+  60% {
+    transform: translate(calc(-50% + 40px), -220%) scale(1.6) rotate(20deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(calc(-50% + 80px), -350%) scale(0.3) rotate(40deg);
+    opacity: 0;
+    filter: none;
+  }
+}
+
+/* Flash rojo radial que cubre la pantalla */
+@keyframes flash-danio {
+  0%   { opacity: 1; }
+  40%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+/* Borde rojo pulsante en los bordes */
+@keyframes borde-danio {
+  0%   { opacity: 1; box-shadow: inset 0 0 80px rgba(255,30,30,0.7); }
+  50%  { opacity: 0.8; box-shadow: inset 0 0 120px rgba(255,30,30,0.5); }
+  100% { opacity: 0; box-shadow: inset 0 0 20px rgba(255,30,30,0); }
+}
+
+/* Sacudida de pantalla estilo game hit */
+@keyframes pantalla-shake {
+  0%,100% { transform: translate(0, 0) rotate(0deg); }
+  10%      { transform: translate(-10px, -6px) rotate(-1.5deg); }
+  20%      { transform: translate(10px,  6px) rotate( 1.5deg); }
+  30%      { transform: translate(-8px,  4px) rotate(-1deg); }
+  40%      { transform: translate(8px,  -4px) rotate( 1deg); }
+  50%      { transform: translate(-6px,  3px) rotate(-0.8deg); }
+  60%      { transform: translate(6px,  -3px) rotate( 0.8deg); }
+  70%      { transform: translate(-4px,  2px) rotate(-0.4deg); }
+  80%      { transform: translate(4px,  -2px) rotate( 0.4deg); }
+  90%      { transform: translate(-2px,  1px); }
+}
+
+.pantalla-shake-anim {
+  animation: pantalla-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+/* Aviso central de presion (¡CUIDADO! / ¡ÚLTIMA VIDA!) */
+@keyframes aviso-vida {
+  0%   {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+    letter-spacing: 8px;
+  }
+  15%  {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.12);
+    letter-spacing: 3px;
+  }
+  25%  { transform: translate(-50%, -50%) scale(0.96); }
+  35%  { transform: translate(-50%, -50%) scale(1.04); }
+  55%  {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.1);
+    letter-spacing: 6px;
+  }
+}
+
+/* Parpadeo extra del corazon lleno (latido acelerado cuando queda 1) */
+body.ultima-vida .corazon.lleno {
+  animation: latido-urgente 0.4s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 8px #ff1e1e) drop-shadow(0 0 16px #ff0000) !important;
+}
+
+@keyframes latido-urgente {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.4); }
 }
