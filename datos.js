@@ -15,22 +15,22 @@ const INTRO_SECUENCIAS = [
     texto: "Esta aldea se llama BIOVILLA. Cada casa, cada generador, cada camino... es parte de una célula viva."
   },
   {
-    retrato: "<img src='HectorSinBote.png' class='retrato-img'>",
+    retrato: "",
     nombre: "HÉCTOR",
     texto: "¿Qué es este lugar...? Recuerdo que me quedé dormido leyendo sobre bioenergía y ahora... ¡estoy aquí dentro!"
   },
   {
-    retrato: "<img src='MissCinthia.png' class='retrato-img'>",
+    retrato: "",
     nombre: "MISS CINTHIA",
     texto: "¡Bienvenido a BioVilla, Héctor! Soy la guía de esta célula. Aquí aprenderás cómo funcionamos como una planta generadora de energía."
   },
   {
-    retrato: "<img src='MissCinthia.png' class='retrato-img'>",
+    retrato: "",
     nombre: "MISS CINTHIA",
     texto: "Explora las zonas, habla con los aldeanos, y cuando estés listo... enfrenta al FALLO ENERGÉTICO en la Zona Danger."
   },
   {
-    retrato: "<img src='HectorSinBote.png' class='retrato-img'>",
+    retrato: "",
     nombre: "HÉCTOR",
     texto: "¡Entendido! Voy a aprender todo sobre el metabolismo y el ATP. ¡No fallaré, Miss Cinthia!"
   }
