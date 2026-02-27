@@ -1353,8 +1353,7 @@ document.addEventListener('DOMContentLoaded', () => {
   actualizarHUD();
   actualizarVidas();
   initMapaDrag();
-  // Música de inicio al primer click (autoplay policy)
-  ['click','touchstart'].forEach(ev =>
-    document.addEventListener(ev, () => Audio.musica('inicio'), { once: true })
-  );
+  // La música de inicio se lanza desde audio.js al primer toque/click
+  // via _desbloquearAudioMovil() → Audio.desbloquear() → _colaInicio
+  // No agregamos otro listener aquí para evitar conflictos en móvil
 });
