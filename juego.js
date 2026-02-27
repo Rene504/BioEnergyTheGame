@@ -122,8 +122,8 @@ const ORDEN_DESBLOQUEO = ['nucleo', 'mitocondria', 'redox'];
 
 function zonaDesbloqueada(zonaId) {
   if (zonaId === 'boss') {
-    // Zona Danger: basta con completar las 3 zonas
-    return ORDEN_DESBLOQUEO.every(z => estado.zonasCompletadas.has(z));
+    // Zona Danger: todas las zonas completadas Y 100 ATP
+    return ORDEN_DESBLOQUEO.every(z => estado.zonasCompletadas.has(z)) && estado.atp >= 100;
   }
   if (!estado.cinthiaCompletada) return false;
   const idx = ORDEN_DESBLOQUEO.indexOf(zonaId);
@@ -205,7 +205,7 @@ function actualizarVidas() {
 function perderVida() {
   const vidasAntes = estado.vidas;
   estado.vidas--;
-
+  Audio.sfx('perder_vida');
   // Animacion dramatica
   animarPerdidaVida(vidasAntes);
   animarFlashDanio();
@@ -321,6 +321,9 @@ function animarShakePantalla() {
 }
 
 function gameOver() {
+  Audio.sfx('game_over');
+  Audio.detenerMusica();
+  setTimeout(() => Audio.musica('inicio'), 1500);
   mostrarPantalla('inicio');
   // Reset completo
   estado.atp = 0;
@@ -339,6 +342,7 @@ function sumarATP(cantidad) {
   estado.atp = Math.min(estado.atp + cantidad, estado.atpMax);
   actualizarHUD();
   actualizarHUDBoss();
+  Audio.sfx('atp_suma');
   const barra = document.getElementById('barra-atp');
   barra.style.boxShadow = '0 0 20px #39ff14';
   setTimeout(() => barra.style.boxShadow = '0 0 8px #39ff14', 600);
@@ -531,6 +535,8 @@ function dibujarMapa() {
 // ── INICIO DEL JUEGO ──
 function iniciarJuego() {
   estado.introIndex = 0;
+  Audio.sfx('click');
+  Audio.musica('intro');
   mostrarPantalla('intro');
   mostrarIntroFrame();
 }
@@ -579,14 +585,16 @@ function mostrarIntroFrame() {
 }
 
 function siguienteIntro() {
+  Audio.sfx('click');
   estado.introIndex++;
   if (estado.introIndex >= INTRO_SECUENCIAS.length) {
+    Audio.musica('mapa');
     mostrarPantalla('mapa');
     dibujarMapa();
     setTimeout(() => {
       resetearVista();
-      initNPCs(); // ← Iniciar NPCs al entrar al mapa por primera vez
-      actualizarEstadoZonas(); // ← Aplicar estado inicial de zonas
+      initNPCs();
+      actualizarEstadoZonas();
     }, 80);
   } else {
     mostrarIntroFrame();
@@ -604,7 +612,7 @@ function entrarZona(zonaId) {
       if (faltanZonas.length > 0) {
         mostrarMensajeTemporal("⚠ Completa todas las zonas primero.");
       } else {
-        mostrarMensajeTemporal("⚠ Completa todas las zonas primero.");
+        mostrarMensajeTemporal("⚡ Necesitas 100 ATP para entrar. ¡Sigue explorando!");
       }
       return;
     }
@@ -632,6 +640,9 @@ function entrarZona(zonaId) {
   estado.dialogoActual = zona.dialogos;
   estado.quizResuelta = estado.zonasCompletadas.has(zonaId);
 
+  Audio.sfx('entrada_zona');
+  Audio.musica('dialogo');
+
   const fondosImagen = { nucleo:'FondoAldeanoLoco.png', mitocondria:'FondoDonCelula.png', redox:'FondoDrKrebs.png' };
   const escenaFondo = document.getElementById('escena-fondo');
   escenaFondo.removeAttribute('style');
@@ -658,7 +669,9 @@ function entrarZona(zonaId) {
 function hablarConCinthia() {
   estado.dialogoActual = DIALOGOS_CINTHIA;
   estado.dialogoIndex = 0;
-  estado.zonaActual = 'cinthia'; // marca especial para finDialogo
+  estado.zonaActual = 'cinthia';
+  Audio.sfx('entrada_zona');
+  Audio.musica('dialogo');
   const _fondo = document.getElementById('escena-fondo');
   _fondo.style.backgroundImage = "url('MissCinthiaFondo.jpeg')";
   _fondo.style.backgroundSize = 'cover';
@@ -707,6 +720,7 @@ function mostrarDialogoActual() {
 }
 
 function siguienteDialogo() {
+  Audio.sfx('click');
   estado.dialogoIndex++;
   if (estado.dialogoIndex >= estado.dialogoActual.length) {
     finDialogo();
@@ -722,7 +736,10 @@ function finDialogo() {
       estado.cinthiaCompletada = true;
       actualizarEstadoZonas();
       volverAlMapa();
-      setTimeout(() => mostrarMensajeTemporal("🏛 ¡Núcleo desbloqueado! Visítalo ahora."), 400);
+      setTimeout(() => {
+        Audio.sfx('zona_desbloqueada');
+        mostrarMensajeTemporal("🏛 ¡Núcleo desbloqueado! Visítalo ahora.");
+      }, 400);
     } else {
       volverAlMapa();
     }
@@ -741,9 +758,15 @@ function finDialogo() {
       const siguiente = ORDEN_DESBLOQUEO[idx + 1];
       const nombres = { nucleo: 'Núcleo', mitocondria: 'Mitocondria', redox: 'REDOX Lab' };
       if (siguiente) {
-        setTimeout(() => mostrarMensajeTemporal(`✅ ¡${nombres[siguiente]} desbloqueado!`), 400);
+        setTimeout(() => {
+          Audio.sfx('zona_desbloqueada');
+          mostrarMensajeTemporal(`✅ ¡${nombres[siguiente]} desbloqueado!`);
+        }, 400);
       } else {
-        setTimeout(() => mostrarMensajeTemporal("☠ ¡ZONA DANGER desbloqueada! ¡A por el Boss!"), 400);
+        setTimeout(() => {
+          Audio.sfx('zona_desbloqueada');
+          mostrarMensajeTemporal("☠ ¡ZONA DANGER desbloqueada! ¡A por el Boss!");
+        }, 400);
       }
       volverAlMapa();
     });
@@ -754,6 +777,8 @@ function finDialogo() {
 
 function volverAlMapa() {
   detenerAnimSprite();
+  Audio.detenerBip();
+  Audio.musica('mapa');
   const _f = document.getElementById('escena-fondo');
   if (_f) { _f.removeAttribute('style'); }
   mostrarPantalla('mapa');
@@ -768,6 +793,7 @@ function volverAlMapa() {
 function lanzarQuiz(quizData, callbackOk) {
   estado.quizPendiente = { data: quizData, callback: callbackOk };
   estado.quizResuelta = false;
+  Audio.musica('quiz');
 
   document.getElementById('quiz-icono').textContent   = quizData.icono;
   document.getElementById('quiz-titulo').textContent  = quizData.titulo;
@@ -809,11 +835,13 @@ function responderQuiz(opcion, quizData, callbackOk, opcionesEl) {
   if (opcion.correcto) {
     feedback.textContent = quizData.feedbackOk;
     feedback.className = 'quiz-feedback ok';
+    Audio.sfx('correcto');
     sumarATP(quizData.atpRecompensa || 20);
     setTimeout(() => { if (callbackOk) callbackOk(); }, 2500);
   } else {
     feedback.textContent = quizData.feedbackFail;
     feedback.className = 'quiz-feedback fail';
+    Audio.sfx('incorrecto');
     const muerto = perderVida();
     if (muerto) return; // game over
     setTimeout(() => {
@@ -835,6 +863,7 @@ function iniciarBoss() {
   estado.bossHP = BOSS_DATA.hpTotal;
   estado.bossFase = 0;
   _bossIntroIdx = 0;
+  Audio.musica('boss');
 
   const pantallaBoss = document.getElementById('pantalla-boss');
   pantallaBoss.style.backgroundImage    = "url('FondoBossATP.png')";
@@ -913,6 +942,7 @@ function responderBoss(opcion, pregunta, faseIdx, opcionesEl) {
   if (opcion.correcto) {
     estado.bossHP -= pregunta.danoBoss;
     actualizarBarraBoss();
+    Audio.sfx('boss_danio');
     escribirTexto('boss-texto', '✅ ' + pregunta.feedbackOk, 15);
     document.getElementById('boss-sprite').style.filter = 'drop-shadow(0 0 30px rgba(57,255,20,0.9)) brightness(0.5)';
     sumarATP(30);
@@ -931,6 +961,7 @@ function responderBoss(opcion, pregunta, faseIdx, opcionesEl) {
     }, 2800);
   } else {
     escribirTexto('boss-texto', '❌ ' + pregunta.feedbackFail, 15);
+    Audio.sfx('incorrecto');
     document.getElementById('boss-sprite').style.animation = 'boss-shake 0.1s ease-in-out infinite alternate';
     const muerto = perderVida();
     if (muerto) return;
@@ -970,15 +1001,12 @@ function activarFase2Boss(callback) {
   const pantallaBoss = document.getElementById('pantalla-boss');
   const sprite  = document.getElementById('boss-sprite');
   const opciones = document.getElementById('boss-opciones');
-  const dialogo = document.getElementById('boss-dialogo-caja');
   if (opciones) opciones.innerHTML = '';
-
-  // Ocultar diálogo y opciones durante la animación
-  if (opciones) opciones.style.visibility = 'hidden';
-  if (dialogo)  dialogo.style.visibility  = 'hidden';
 
   sprite.style.animation = 'boss-shake 0.08s ease-in-out infinite alternate';
   sprite.style.filter    = 'brightness(3) drop-shadow(0 0 40px #fff)';
+  Audio.sfx('boss_fase2');
+  Audio.detenerMusica(false);
 
   if (!document.getElementById('fase2-keyframe')) {
     const s = document.createElement('style');
@@ -1007,7 +1035,7 @@ function activarFase2Boss(callback) {
     sprite.textContent = '💀';
     sprite.style.animation = 'fase2-entrada 0.9s cubic-bezier(.22,1,.36,1) forwards';
     sprite.style.filter    = '';
-    // Mostrar diálogo con el texto de fase 2
+    Audio.musica('boss_fase2');
     if (dialogo) dialogo.style.visibility = 'visible';
     escribirTexto('boss-texto', '⚡ ¡FASE FINAL ACTIVADA! ¡EL FALLO ENERGÉTICO HA EVOLUCIONADO! ¡Responde la pregunta definitiva para salvar BioVilla!', 18);
   }, 1100);
@@ -1016,14 +1044,14 @@ function activarFase2Boss(callback) {
     flash.remove();
     sprite.style.animation = 'boss-shake 0.3s ease-in-out infinite alternate';
     sprite.style.filter    = 'drop-shadow(0 0 20px rgba(255,30,30,0.8))';
-    // Restaurar opciones
-    if (opciones) opciones.style.visibility = 'visible';
     if (callback) callback();
   }, 2900);
 }
 
 // ── VICTORIA ──
 function victoria() {
+  Audio.sfx('victoria_fanfare');
+  setTimeout(() => Audio.musica('victoria'), 1000);
   setTimeout(() => {
     var nombreEl = document.getElementById('boss-nombre-npc');
     if (nombreEl) nombreEl.textContent = '💀 ' + BOSS_DATA.nombre;
@@ -1036,6 +1064,8 @@ function victoria() {
 }
 
 function reiniciarJuego() {
+  Audio.sfx('click');
+  Audio.musica('inicio');
   estado.atp = 0;
   estado.introIndex = 0;
   estado.zonasCompletadas.clear();
@@ -1050,9 +1080,11 @@ function reiniciarJuego() {
 
 // ── CRÉDITOS ──
 function mostrarCreditos() {
+  Audio.sfx('click');
   document.getElementById('modal-creditos').classList.remove('oculto');
 }
 function cerrarCreditos() {
+  Audio.sfx('click');
   document.getElementById('modal-creditos').classList.add('oculto');
 }
 
@@ -1321,4 +1353,8 @@ document.addEventListener('DOMContentLoaded', () => {
   actualizarHUD();
   actualizarVidas();
   initMapaDrag();
+  // Música de inicio al primer click (autoplay policy)
+  ['click','touchstart'].forEach(ev =>
+    document.addEventListener(ev, () => Audio.musica('inicio'), { once: true })
+  );
 });
