@@ -239,6 +239,10 @@ const Audio = (() => {
     VOL.sfx = Math.max(0, Math.min(1, v));
   }
 
+  // Encolar música de inicio automáticamente al cargar
+  // Se reproducirá cuando el usuario toque la pantalla por primera vez
+  _colaInicio = { nombre: 'inicio', loop: true };
+
   // API pública
   return { musica, detenerMusica, sfx, iniciarBip, detenerBip, desbloquear, setVolMusica, setVolSFX, MUSICA, SFX };
 
@@ -247,7 +251,28 @@ const Audio = (() => {
 // ─────────────────────────────────────────────────────
 // Desbloquear audio en el primer toque/click del usuario
 // (política de autoplay de Chrome, Safari, Firefox móvil)
+//
+// IMPORTANTE: usamos { once: true } solo en el handler de
+// Audio.desbloquear para no interferir con el listener de
+// juego.js que también pide Audio.musica('inicio').
+// Además creamos y reproducimos un AudioContext silencioso
+// para "despertar" el motor de audio en iOS Safari.
 // ─────────────────────────────────────────────────────
-['click', 'touchstart', 'keydown'].forEach(ev => {
-  document.addEventListener(ev, () => Audio.desbloquear(), { once: true });
+function _desbloquearAudioMovil() {
+  // Truco para iOS: reproducir un buffer vacío despierta el motor de audio
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    ctx.resume();
+  } catch(e) {}
+
+  Audio.desbloquear();
+}
+
+['click', 'touchstart', 'touchend', 'keydown'].forEach(ev => {
+  document.addEventListener(ev, _desbloquearAudioMovil, { once: true, passive: true });
 });
