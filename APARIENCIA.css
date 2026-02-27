@@ -1483,131 +1483,148 @@ html {
   }
 }
 /* ══════════════════════════════════════════════════════════
-   FIX MÓVIL — Botones SIGUIENTE y VOLVER arriba en móvil
-   Pega esto AL FINAL de APARIENCIA.css
+   FIX MÓVIL DEFINITIVO — Reemplaza los dos fixes anteriores
+   Pega SOLO ESTO al final de APARIENCIA.css
+   (borra los bloques "FIX MÓVIL" y "FIX BOTÓN SIGUIENTE" anteriores)
    ══════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════
+   1. CORRECCIÓN GLOBAL — btn-pixel en móvil
+      El min-height/min-width de 44px causaba el estiramiento.
+      Overrideamos solo en los botones de navegación.
+   ═══════════════════════════════════ */
+.btn-siguiente,
+.btn-volver {
+  min-height: unset !important;
+  min-width: unset !important;
+  width: auto !important;
+  height: auto !important;
+  flex: none !important;
+  align-self: auto !important;
+  max-width: fit-content !important;
+}
+
+/* ═══════════════════════════════════
+   2. MÓVIL — Posición de botones arriba
+   ═══════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* ── BOTÓN SIGUIENTE — sube arriba a la derecha ── */
+  /* ── SIGUIENTE ▶ — esquina superior derecha ── */
   .btn-siguiente {
     position: fixed !important;
-    top: 56px !important;       /* justo debajo del HUD */
+    top: 56px !important;
     bottom: auto !important;
-    right: 12px !important;
+    right: 10px !important;
     left: auto !important;
+    padding: 8px 14px !important;
     font-size: 8px !important;
-    padding: 10px 14px !important;
-    z-index: 200 !important;
+    z-index: 500 !important;
+    display: inline-block !important;
   }
 
-  /* ── BOTÓN VOLVER — sube arriba a la izquierda ── */
+  /* ── ◀ MAPA — esquina superior izquierda ── */
   .btn-volver {
     position: fixed !important;
     top: 56px !important;
     bottom: auto !important;
-    left: 12px !important;
+    left: 10px !important;
     right: auto !important;
+    padding: 8px 14px !important;
     font-size: 8px !important;
-    padding: 10px 14px !important;
-    z-index: 200 !important;
+    z-index: 500 !important;
+    display: inline-block !important;
   }
 
-  /* ── PANTALLA DIÁLOGO — caja ocupa más espacio vertical ── */
+  /* Excepción: en pantalla INTRO el siguiente va arriba sin offset de HUD */
+  #pantalla-intro .btn-siguiente {
+    top: 10px !important;
+  }
+
+  /* ═══════════════════════════════════
+     3. PANTALLA DIÁLOGO
+     ═══════════════════════════════════ */
+  #pantalla-dialogo {
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+  }
+
   #pantalla-dialogo .caja-dialogo {
+    position: fixed !important;
     bottom: 0 !important;
-    padding: 14px 16px 20px 16px !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+    padding: 14px 14px 20px 14px !important;
     min-height: auto !important;
-    max-height: 52vh !important;
+    max-height: 42vh !important;
     overflow-y: auto !important;
+    z-index: 55 !important;
   }
 
-  /* ── Texto del diálogo más legible ── */
-  #pantalla-dialogo .texto-dialogo {
-    font-size: clamp(17px, 4.5vw, 22px) !important;
-    min-height: auto !important;
-    line-height: 1.5 !important;
+  /* Sin padding-left extra — no hay sprite en móvil */
+  #pantalla-dialogo .caja-dialogo,
+  body.sprite-activo #pantalla-dialogo .caja-dialogo {
+    padding-left: 14px !important;
   }
 
-  /* ── Nombre del NPC ── */
-  #pantalla-dialogo .nombre-npc {
-    font-size: 9px !important;
-    margin-bottom: 8px !important;
-  }
-
-  /* ── Ocultar sprite lateral en móvil (ocupa espacio) ── */
+  /* Ocultar sprite lateral (ocupa demasiado espacio en móvil) */
+  #pantalla-dialogo .retrato-npc,
   #pantalla-dialogo .retrato-npc:has(img.retrato-img) {
     display: none !important;
   }
 
-  /* ── Sin padding extra por sprite en móvil ── */
-  body.sprite-activo #pantalla-dialogo .caja-dialogo {
-    padding-left: 16px !important;
+  #pantalla-dialogo .nombre-npc {
+    font-size: 9px !important;
+    letter-spacing: 2px !important;
+    margin-bottom: 6px !important;
   }
 
-  /* ── PANTALLA BOSS — ajustes ── */
-  #pantalla-boss .btn-siguiente {
-    top: 56px !important;
-    bottom: auto !important;
-    right: 12px !important;
-  }
-
-  #pantalla-boss .boss-dialogo {
-    padding: 14px 16px 20px 16px !important;
-    min-height: auto !important;
-    max-height: 45vh !important;
-    overflow-y: auto !important;
-  }
-
-  #pantalla-boss #boss-texto,
-  #pantalla-boss .boss-dialogo .texto-dialogo {
-    font-size: clamp(17px, 4.5vw, 22px) !important;
-    min-height: auto !important;
+  #pantalla-dialogo .texto-dialogo {
+    font-size: clamp(16px, 4.2vw, 21px) !important;
     line-height: 1.5 !important;
-    padding-left: 12px !important;
+    min-height: auto !important;
   }
 
-  #pantalla-boss .boss-opciones {
+  /* ═══════════════════════════════════
+     4. PANTALLA INTRO — caja de diálogo
+     ═══════════════════════════════════ */
+  #pantalla-intro {
+    padding-bottom: 0 !important;
+    justify-content: flex-end !important;
+  }
+
+  #pantalla-intro .caja-dialogo,
+  #pantalla-intro .intro-dialogo {
     position: fixed !important;
-    bottom: auto !important;
-    top: 110px !important;       /* debajo del HUD y botón siguiente */
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 96vw !important;
-    z-index: 60 !important;
-    max-height: 45vh !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+    padding: 14px 14px 20px 14px !important;
+    min-height: auto !important;
+    max-height: 42vh !important;
     overflow-y: auto !important;
+    flex-direction: column !important;
+    z-index: 55 !important;
   }
 
-  /* ── INTRO — botón siguiente arriba ── */
-  #pantalla-intro .btn-siguiente {
-    top: 12px !important;
-    bottom: auto !important;
-    right: 12px !important;
+  #pantalla-intro .retrato-npc,
+  #pantalla-intro .retrato-npc:has(img.retrato-img) {
+    display: none !important;
   }
 
-  /* ── QUIZ — más espacio en pantalla ── */
-  .quiz-contenedor {
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    padding: 14px !important;
-    margin: 0 8px !important;
-  }
-
-  .quiz-pregunta {
-    font-size: clamp(15px, 4vw, 19px) !important;
-    margin-bottom: 16px !important;
-  }
-
-  .btn-quiz-op {
-    font-size: clamp(14px, 3.8vw, 18px) !important;
-    padding: 12px 14px !important;
-  }
-
-  /* ── ARENA DEL BOSS — reducir padding para dar espacio ── */
+  /* ═══════════════════════════════════
+     5. PANTALLA BOSS
+     ═══════════════════════════════════ */
   .boss-arena {
     padding-top: 50px !important;
-    padding-bottom: 48vh !important; /* espacio para diálogo abajo */
+    padding-bottom: 220px !important;
   }
 
   .boss-sprite {
@@ -1618,156 +1635,103 @@ html {
     font-size: clamp(10px, 3vw, 16px) !important;
   }
 
+  .boss-dialogo {
+    padding: 14px 14px 20px 14px !important;
+    min-height: auto !important;
+    max-height: 42vh !important;
+    overflow-y: auto !important;
+  }
+
+  #pantalla-boss #boss-texto,
+  #pantalla-boss .boss-dialogo .texto-dialogo {
+    font-size: clamp(16px, 4.2vw, 21px) !important;
+    min-height: auto !important;
+    line-height: 1.5 !important;
+    padding-left: 12px !important;
+  }
+
+  /* Opciones del boss — debajo del botón SIGUIENTE, arriba del diálogo */
+  .boss-opciones {
+    position: fixed !important;
+    top: 110px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 96vw !important;
+    max-height: 40vh !important;
+    overflow-y: auto !important;
+    z-index: 60 !important;
+  }
+
+  /* ═══════════════════════════════════
+     6. QUIZ
+     ═══════════════════════════════════ */
+  .quiz-contenedor {
+    width: 96vw !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    padding: 14px !important;
+    margin: 0 !important;
+  }
+
+  .quiz-pregunta {
+    font-size: clamp(15px, 4vw, 19px) !important;
+    margin-bottom: 14px !important;
+  }
+
+  .btn-quiz-op {
+    font-size: clamp(14px, 3.8vw, 18px) !important;
+    padding: 12px 14px !important;
+  }
+
+  /* ═══════════════════════════════════
+     7. HUD compacto
+     ═══════════════════════════════════ */
+  .hud-top {
+    font-size: 8px !important;
+    gap: 8px !important;
+    padding: 6px 10px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .barra-atp-wrap {
+    max-width: 80px !important;
+  }
+
+  .hud-nombre {
+    font-size: 7px !important;
+  }
+
+  /* Zoom controles — no chocan con botón volver */
+  .zoom-controles {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  /* Modal créditos */
+  .modal-caja {
+    padding: 20px !important;
+    width: 92vw !important;
+    font-size: 14px !important;
+  }
 }
 
-/* ── Pantallas muy pequeñas (< 400px) ── */
+/* ═══════════════════════════════════
+   8. Pantallas muy pequeñas (< 400px)
+   ═══════════════════════════════════ */
 @media (max-width: 400px) {
 
   .btn-siguiente,
   .btn-volver {
     font-size: 7px !important;
-    padding: 8px 10px !important;
+    padding: 7px 10px !important;
   }
 
   #pantalla-dialogo .texto-dialogo {
-    font-size: clamp(15px, 4vw, 18px) !important;
+    font-size: clamp(14px, 4vw, 17px) !important;
   }
 
   .quiz-titulo {
     font-size: 9px !important;
   }
-
-}
-
-/* ══════════════════════════════════════════════════════════
-   FIX BOTÓN SIGUIENTE — Escena Miss Cinthia y diálogos
-   Pega esto AL FINAL de APARIENCIA.css (después del fix anterior)
-   ══════════════════════════════════════════════════════════ */
-
-/* ── Fix universal: el botón SIGUIENTE NUNCA debe estirarse ── */
-.btn-siguiente {
-  width: auto !important;
-  height: auto !important;
-  max-width: fit-content !important;
-  align-self: auto !important;
-  flex: none !important;
-}
-
-/* ── Fix en pantalla-dialogo: posición fija arriba derecha en móvil ── */
-@media (max-width: 768px) {
-
-  /* SIGUIENTE — esquina superior derecha, tamaño compacto */
-  #pantalla-dialogo .btn-siguiente {
-    position: fixed !important;
-    top: 56px !important;
-    bottom: auto !important;
-    right: 12px !important;
-    left: auto !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: unset !important;
-    padding: 10px 16px !important;
-    font-size: 8px !important;
-    z-index: 300 !important;
-    display: inline-block !important;
-    /* Quitar cualquier stretch de flexbox */
-    align-self: flex-start !important;
-  }
-
-  /* VOLVER — esquina superior izquierda */
-  #pantalla-dialogo .btn-volver {
-    position: fixed !important;
-    top: 56px !important;
-    bottom: auto !important;
-    left: 12px !important;
-    right: auto !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: unset !important;
-    padding: 10px 16px !important;
-    font-size: 8px !important;
-    z-index: 300 !important;
-    display: inline-block !important;
-    align-self: flex-start !important;
-  }
-
-  /* La caja de diálogo NO debe incluir los botones en su flujo flex */
-  #pantalla-dialogo {
-    flex-direction: column !important;
-    justify-content: flex-end !important;
-  }
-
-  /* Asegura que la caja de diálogo quede abajo y no tape nada */
-  #pantalla-dialogo .caja-dialogo {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 16px 16px 24px 16px !important;
-    min-height: auto !important;
-    max-height: 45vh !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Sprite de Miss Cinthia — ocultar en móvil para no ocupar espacio */
-  #pantalla-dialogo .retrato-npc,
-  #pantalla-dialogo .retrato-npc:has(img.retrato-img) {
-    display: none !important;
-  }
-
-  /* Texto sin padding-left extra cuando no hay sprite */
-  body.sprite-activo #pantalla-dialogo .caja-dialogo,
-  #pantalla-dialogo .caja-dialogo {
-    padding-left: 16px !important;
-  }
-
-  /* Nombre del NPC legible */
-  #pantalla-dialogo .nombre-npc {
-    font-size: 9px !important;
-    letter-spacing: 2px !important;
-  }
-
-  /* Texto del diálogo */
-  #pantalla-dialogo .texto-dialogo {
-    font-size: clamp(16px, 4.2vw, 21px) !important;
-    line-height: 1.5 !important;
-    min-height: auto !important;
-  }
-
-  /* INTRO — mismo fix */
-  #pantalla-intro .btn-siguiente {
-    position: fixed !important;
-    top: 12px !important;
-    bottom: auto !important;
-    right: 12px !important;
-    left: auto !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: unset !important;
-    padding: 10px 16px !important;
-    font-size: 8px !important;
-    z-index: 300 !important;
-    display: inline-block !important;
-  }
-
-  /* BOSS — mismo fix */
-  #pantalla-boss .btn-siguiente {
-    position: fixed !important;
-    top: 56px !important;
-    bottom: auto !important;
-    right: 12px !important;
-    left: auto !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: unset !important;
-    padding: 10px 16px !important;
-    font-size: 8px !important;
-    z-index: 300 !important;
-    display: inline-block !important;
-  }
-
 }
