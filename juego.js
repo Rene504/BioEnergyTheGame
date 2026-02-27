@@ -122,8 +122,8 @@ const ORDEN_DESBLOQUEO = ['nucleo', 'mitocondria', 'redox'];
 
 function zonaDesbloqueada(zonaId) {
   if (zonaId === 'boss') {
-    // Zona Danger: todas las zonas completadas Y 100 ATP
-    return ORDEN_DESBLOQUEO.every(z => estado.zonasCompletadas.has(z)) && estado.atp >= 100;
+    // Zona Danger: basta con completar las 3 zonas
+    return ORDEN_DESBLOQUEO.every(z => estado.zonasCompletadas.has(z));
   }
   if (!estado.cinthiaCompletada) return false;
   const idx = ORDEN_DESBLOQUEO.indexOf(zonaId);
@@ -604,7 +604,7 @@ function entrarZona(zonaId) {
       if (faltanZonas.length > 0) {
         mostrarMensajeTemporal("⚠ Completa todas las zonas primero.");
       } else {
-        mostrarMensajeTemporal("⚡ Necesitas 100 ATP para entrar. ¡Sigue explorando!");
+        mostrarMensajeTemporal("⚠ Completa todas las zonas primero.");
       }
       return;
     }
@@ -742,10 +742,8 @@ function finDialogo() {
       const nombres = { nucleo: 'Núcleo', mitocondria: 'Mitocondria', redox: 'REDOX Lab' };
       if (siguiente) {
         setTimeout(() => mostrarMensajeTemporal(`✅ ¡${nombres[siguiente]} desbloqueado!`), 400);
-      } else if (estado.atp >= 100) {
-        setTimeout(() => mostrarMensajeTemporal("☠ ¡ZONA DANGER desbloqueada! ¡A por el Boss!"), 400);
       } else {
-        setTimeout(() => mostrarMensajeTemporal(`⚡ ATP: ${estado.atp}/100. ¡Sigue adelante!`), 400);
+        setTimeout(() => mostrarMensajeTemporal("☠ ¡ZONA DANGER desbloqueada! ¡A por el Boss!"), 400);
       }
       volverAlMapa();
     });
@@ -972,7 +970,12 @@ function activarFase2Boss(callback) {
   const pantallaBoss = document.getElementById('pantalla-boss');
   const sprite  = document.getElementById('boss-sprite');
   const opciones = document.getElementById('boss-opciones');
+  const dialogo = document.getElementById('boss-dialogo-caja');
   if (opciones) opciones.innerHTML = '';
+
+  // Ocultar diálogo y opciones durante la animación
+  if (opciones) opciones.style.visibility = 'hidden';
+  if (dialogo)  dialogo.style.visibility  = 'hidden';
 
   sprite.style.animation = 'boss-shake 0.08s ease-in-out infinite alternate';
   sprite.style.filter    = 'brightness(3) drop-shadow(0 0 40px #fff)';
@@ -1004,6 +1007,8 @@ function activarFase2Boss(callback) {
     sprite.textContent = '💀';
     sprite.style.animation = 'fase2-entrada 0.9s cubic-bezier(.22,1,.36,1) forwards';
     sprite.style.filter    = '';
+    // Mostrar diálogo con el texto de fase 2
+    if (dialogo) dialogo.style.visibility = 'visible';
     escribirTexto('boss-texto', '⚡ ¡FASE FINAL ACTIVADA! ¡EL FALLO ENERGÉTICO HA EVOLUCIONADO! ¡Responde la pregunta definitiva para salvar BioVilla!', 18);
   }, 1100);
 
@@ -1011,6 +1016,8 @@ function activarFase2Boss(callback) {
     flash.remove();
     sprite.style.animation = 'boss-shake 0.3s ease-in-out infinite alternate';
     sprite.style.filter    = 'drop-shadow(0 0 20px rgba(255,30,30,0.8))';
+    // Restaurar opciones
+    if (opciones) opciones.style.visibility = 'visible';
     if (callback) callback();
   }, 2900);
 }
@@ -1239,25 +1246,11 @@ function initMapaDrag() {
   let zoomAlIniciarPinch = 1;
   let touchMedio = { x: 0, y: 0 };
 
-  // ── Umbral de movimiento para distinguir tap vs drag (px) ──
-  const TAP_UMBRAL = 10;
-  let touchEsInteractivo = false;
-
   cont.addEventListener('touchstart', e => {
     cancelarInercia();
-
-    // Detectar si el toque inició sobre un elemento interactivo
-    const target = e.target;
-    touchEsInteractivo = !!(
-      target.closest('.zona-hotspot') ||
-      target.closest('.npc-entidad') ||
-      target.closest('.btn-pixel') ||
-      target.closest('.zoom-btn')
-    );
-
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      vistaMap.arrastrando = !touchEsInteractivo; // No iniciar drag en elementos interactivos
+      vistaMap.arrastrando = true;
       touchInicial = { x: t.clientX, y: t.clientY };
       vistaMap.startVX = vistaMap.x;
       vistaMap.startVY = vistaMap.y;
@@ -1274,40 +1267,20 @@ function initMapaDrag() {
         y: (t1.clientY + t2.clientY) / 2
       };
     }
-
-    // Solo prevenir default si NO es un elemento interactivo
-    if (!touchEsInteractivo) {
-      e.preventDefault();
-    }
+    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchmove', e => {
-    if (e.touches.length === 1 && touchInicial) {
+    if (e.touches.length === 1 && vistaMap.arrastrando && touchInicial) {
       const t = e.touches[0];
-      const dx = t.clientX - touchInicial.x;
-      const dy = t.clientY - touchInicial.y;
-      const distMov = Math.hypot(dx, dy);
-
-      // Si se mueve más del umbral, convertir en drag (aunque haya empezado en interactivo)
-      if (!vistaMap.arrastrando && distMov > TAP_UMBRAL) {
-        vistaMap.arrastrando = true;
-        // Recalcular punto de inicio para evitar salto
-        vistaMap.startVX = vistaMap.x;
-        vistaMap.startVY = vistaMap.y;
-        touchInicial = { x: t.clientX, y: t.clientY };
-      }
-
-      if (vistaMap.arrastrando) {
-        vistaMap.velX = t.clientX - vistaMap.lastX;
-        vistaMap.velY = t.clientY - vistaMap.lastY;
-        vistaMap.lastX = t.clientX;
-        vistaMap.lastY = t.clientY;
-        vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
-        vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
-        clampVista();
-        aplicarTransforma();
-        e.preventDefault();
-      }
+      vistaMap.velX = t.clientX - vistaMap.lastX;
+      vistaMap.velY = t.clientY - vistaMap.lastY;
+      vistaMap.lastX = t.clientX;
+      vistaMap.lastY = t.clientY;
+      vistaMap.x = vistaMap.startVX + (t.clientX - touchInicial.x);
+      vistaMap.y = vistaMap.startVY + (t.clientY - touchInicial.y);
+      clampVista();
+      aplicarTransforma();
     } else if (e.touches.length === 2 && pinchDistInicial) {
       const t1 = e.touches[0], t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -1321,33 +1294,13 @@ function initMapaDrag() {
       vistaMap.zoom = nuevoZoom;
       clampVista();
       aplicarTransforma();
-      e.preventDefault();
     }
+    e.preventDefault();
   }, { passive: false });
 
   cont.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
-      const wasDragging = vistaMap.arrastrando;
       vistaMap.arrastrando = false;
-      touchEsInteractivo = false;
-
-      // Si NO hubo drag real, disparar click manualmente en el elemento objetivo
-      if (!wasDragging && touchInicial) {
-        const lastTouch = e.changedTouches[0];
-        const dx = lastTouch.clientX - touchInicial.x;
-        const dy = lastTouch.clientY - touchInicial.y;
-        if (Math.hypot(dx, dy) <= TAP_UMBRAL) {
-          const el = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
-          if (el) {
-            // Buscar el elemento clicable más cercano
-            const clickable = el.closest('.zona-hotspot, .npc-entidad, .btn-pixel, .zoom-btn');
-            if (clickable) {
-              clickable.click();
-            }
-          }
-        }
-      }
-
       touchInicial = null;
       pinchDistInicial = null;
       if (Math.abs(vistaMap.velX) > 1 || Math.abs(vistaMap.velY) > 1) {
