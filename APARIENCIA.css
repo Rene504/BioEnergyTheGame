@@ -1482,3 +1482,159 @@ html {
     font-size: 14px;
   }
 }
+/* ══════════════════════════════════════════════════════════
+   FIX MÓVIL — Botones SIGUIENTE y VOLVER arriba en móvil
+   Pega esto AL FINAL de APARIENCIA.css
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── BOTÓN SIGUIENTE — sube arriba a la derecha ── */
+  .btn-siguiente {
+    position: fixed !important;
+    top: 56px !important;       /* justo debajo del HUD */
+    bottom: auto !important;
+    right: 12px !important;
+    left: auto !important;
+    font-size: 8px !important;
+    padding: 10px 14px !important;
+    z-index: 200 !important;
+  }
+
+  /* ── BOTÓN VOLVER — sube arriba a la izquierda ── */
+  .btn-volver {
+    position: fixed !important;
+    top: 56px !important;
+    bottom: auto !important;
+    left: 12px !important;
+    right: auto !important;
+    font-size: 8px !important;
+    padding: 10px 14px !important;
+    z-index: 200 !important;
+  }
+
+  /* ── PANTALLA DIÁLOGO — caja ocupa más espacio vertical ── */
+  #pantalla-dialogo .caja-dialogo {
+    bottom: 0 !important;
+    padding: 14px 16px 20px 16px !important;
+    min-height: auto !important;
+    max-height: 52vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Texto del diálogo más legible ── */
+  #pantalla-dialogo .texto-dialogo {
+    font-size: clamp(17px, 4.5vw, 22px) !important;
+    min-height: auto !important;
+    line-height: 1.5 !important;
+  }
+
+  /* ── Nombre del NPC ── */
+  #pantalla-dialogo .nombre-npc {
+    font-size: 9px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ── Ocultar sprite lateral en móvil (ocupa espacio) ── */
+  #pantalla-dialogo .retrato-npc:has(img.retrato-img) {
+    display: none !important;
+  }
+
+  /* ── Sin padding extra por sprite en móvil ── */
+  body.sprite-activo #pantalla-dialogo .caja-dialogo {
+    padding-left: 16px !important;
+  }
+
+  /* ── PANTALLA BOSS — ajustes ── */
+  #pantalla-boss .btn-siguiente {
+    top: 56px !important;
+    bottom: auto !important;
+    right: 12px !important;
+  }
+
+  #pantalla-boss .boss-dialogo {
+    padding: 14px 16px 20px 16px !important;
+    min-height: auto !important;
+    max-height: 45vh !important;
+    overflow-y: auto !important;
+  }
+
+  #pantalla-boss #boss-texto,
+  #pantalla-boss .boss-dialogo .texto-dialogo {
+    font-size: clamp(17px, 4.5vw, 22px) !important;
+    min-height: auto !important;
+    line-height: 1.5 !important;
+    padding-left: 12px !important;
+  }
+
+  #pantalla-boss .boss-opciones {
+    position: fixed !important;
+    bottom: auto !important;
+    top: 110px !important;       /* debajo del HUD y botón siguiente */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 96vw !important;
+    z-index: 60 !important;
+    max-height: 45vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── INTRO — botón siguiente arriba ── */
+  #pantalla-intro .btn-siguiente {
+    top: 12px !important;
+    bottom: auto !important;
+    right: 12px !important;
+  }
+
+  /* ── QUIZ — más espacio en pantalla ── */
+  .quiz-contenedor {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    padding: 14px !important;
+    margin: 0 8px !important;
+  }
+
+  .quiz-pregunta {
+    font-size: clamp(15px, 4vw, 19px) !important;
+    margin-bottom: 16px !important;
+  }
+
+  .btn-quiz-op {
+    font-size: clamp(14px, 3.8vw, 18px) !important;
+    padding: 12px 14px !important;
+  }
+
+  /* ── ARENA DEL BOSS — reducir padding para dar espacio ── */
+  .boss-arena {
+    padding-top: 50px !important;
+    padding-bottom: 48vh !important; /* espacio para diálogo abajo */
+  }
+
+  .boss-sprite {
+    font-size: clamp(48px, 12vw, 72px) !important;
+  }
+
+  .boss-nombre {
+    font-size: clamp(10px, 3vw, 16px) !important;
+  }
+
+}
+
+/* ── Pantallas muy pequeñas (< 400px) ── */
+@media (max-width: 400px) {
+
+  .btn-siguiente,
+  .btn-volver {
+    font-size: 7px !important;
+    padding: 8px 10px !important;
+  }
+
+  #pantalla-dialogo .texto-dialogo {
+    font-size: clamp(15px, 4vw, 18px) !important;
+  }
+
+  .quiz-titulo {
+    font-size: 9px !important;
+  }
+
+}
